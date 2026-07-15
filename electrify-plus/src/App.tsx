@@ -13,6 +13,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts'
+import ChatAssistant from './components/ChatAssistant'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -30,17 +31,19 @@ function Dashboard() {
   const [records, setRecords] = useState<ConsumptionRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [userSub, setUserSub] = useState<string | null>(null)
+  const [username, setUsername] = useState<string | undefined>(undefined)
   const [error, setError] = useState<string | null>(null)
 
   const fetchRecords = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      // Use fetchAuthSession to get the true Cognito sub from the ID token payload.
-      // getCurrentUser().userId returns the Cognito username, which is NOT the sub UUID
-      // and will not match customerId values seeded directly into DynamoDB.
       const session = await fetchAuthSession()
-      const sub = session.tokens?.idToken?.payload?.sub as string | undefined
+      const payload = session.tokens?.idToken?.payload
+      const sub = payload?.sub as string | undefined
+      // Prefer the email prefix or Cognito preferred_username as display name
+      const email = payload?.email as string | undefined
+      setUsername(email ? email.split('@')[0] : undefined)
 
       if (!sub) {
         setError('Could not resolve Cognito user identity. Please sign out and sign back in.')
@@ -58,7 +61,6 @@ function Dashboard() {
         return
       }
 
-      // Sort ascending by monthYear (YYYY-MM strings sort lexicographically)
       const sorted = [...(items ?? [])].sort((a, b) =>
         (a.monthYear ?? '').localeCompare(b.monthYear ?? '')
       )
@@ -74,14 +76,13 @@ function Dashboard() {
     void fetchRecords()
   }, [fetchRecords])
 
-  // Derived KPIs from live data
   const totalKwh = records.reduce((sum, r) => sum + (r.kwhUsage ?? 0), 0)
   const totalSpend = records.reduce((sum, r) => sum + (r.statementAmount ?? 0), 0)
   const avgKwh = records.length > 0 ? Math.round(totalKwh / records.length) : 0
 
   return (
     <div style={styles.page}>
-      {/* Header */}
+      {/* ── Header ── */}
       <header style={styles.header}>
         <div>
           <h1 style={styles.headerTitle}>Electrify! Plus Dashboard</h1>
@@ -100,134 +101,133 @@ function Dashboard() {
           </div>
         )}
 
-        {/* KPI Cards */}
-        <section style={styles.kpiRow} aria-label="Key metrics">
-          <div style={styles.kpiCard}>
-            <span style={styles.kpiLabel}>Total Consumption</span>
-            <span style={styles.kpiValue}>
-              {loading ? '—' : `${totalKwh.toLocaleString()} kWh`}
-            </span>
-          </div>
-          <div style={styles.kpiCard}>
-            <span style={styles.kpiLabel}>Monthly Average</span>
-            <span style={styles.kpiValue}>
-              {loading ? '—' : `${avgKwh} kWh`}
-            </span>
-          </div>
-          <div style={styles.kpiCard}>
-            <span style={styles.kpiLabel}>Total Spend</span>
-            <span style={styles.kpiValue}>
-              {loading ? '—' : `$${totalSpend.toFixed(2)}`}
-            </span>
-          </div>
-        </section>
+        {/* ── Two-column grid: data (60%) + chat (40%) ── */}
+        <div style={styles.contentGrid}>
 
-        {/* Chart Section */}
-        <section style={styles.card} aria-labelledby="chart-heading">
-          <h2 id="chart-heading" style={styles.sectionTitle}>
-            12-Month Consumption Chart
-          </h2>
-          {loading ? (
-            <div style={styles.emptyState}>Connecting to Electrify Grid…</div>
-          ) : records.length === 0 ? (
-            <div style={styles.emptyState}>
-              <p style={{ margin: '0 0 8px' }}>No data found for Customer ID:</p>
-              <code style={styles.subCode}>{userSub ?? '—'}</code>
-              <p style={{ margin: '12px 0 0', fontSize: 13 }}>
-                Ensure your seed script uses this exact ID as <strong>customerId</strong>.
-              </p>
-            </div>
-          ) : (
-            <ResponsiveContainer width="100%" height={320}>
-              <BarChart
-                data={records}
-                margin={{ top: 8, right: 24, left: 0, bottom: 8 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e4e7" />
-                <XAxis
-                  dataKey="monthYear"
-                  tick={{ fontSize: 12 }}
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 12 }}
-                  tickLine={false}
-                  axisLine={false}
-                  unit=" kWh"
-                />
-                <Tooltip
-                  formatter={(value: number) => [`${value} kWh`, 'Usage']}
-                  contentStyle={{ borderRadius: 8, border: '1px solid #e5e4e7' }}
-                />
-                <Legend />
-                <Bar
-                  dataKey="kwhUsage"
-                  name="kWh Usage"
-                  fill="#aa3bff"
-                  radius={[4, 4, 0, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </section>
+          {/* ── Left column: KPIs + Chart + Table ── */}
+          <div style={styles.leftCol}>
 
-        {/* Table Section */}
-        <section style={styles.card} aria-labelledby="table-heading">
-          <h2 id="table-heading" style={styles.sectionTitle}>
-            Monthly Detail Table
-          </h2>
-          <div style={styles.tableWrapper}>
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th style={styles.th}>Month</th>
-                  <th style={{ ...styles.th, textAlign: 'right' }}>kWh Consumed</th>
-                  <th style={{ ...styles.th, textAlign: 'right' }}>Statement Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={3} style={{ ...styles.td, textAlign: 'center', color: '#6b6375' }}>
-                      Connecting to Electrify Grid…
-                    </td>
-                  </tr>
-                ) : records.length === 0 ? (
-                  <tr>
-                    <td colSpan={3} style={{ ...styles.td, textAlign: 'center', color: '#6b6375' }}>
-                      No records found.
-                    </td>
-                  </tr>
-                ) : (
-                  records.map((row) => (
-                    <tr key={row.id} style={styles.tr}>
-                      <td style={styles.td}>{row.monthYear}</td>
-                      <td style={{ ...styles.td, textAlign: 'right' }}>
-                        {(row.kwhUsage ?? 0).toLocaleString()}
-                      </td>
-                      <td style={{ ...styles.td, textAlign: 'right' }}>
-                        ${(row.statementAmount ?? 0).toFixed(2)}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-              {records.length > 0 && !loading && (
-                <tfoot>
-                  <tr>
-                    <td style={{ ...styles.td, fontWeight: 600 }}>Total</td>
-                    <td style={{ ...styles.td, textAlign: 'right', fontWeight: 600 }}>
-                      {totalKwh.toLocaleString()}
-                    </td>
-                    <td style={{ ...styles.td, textAlign: 'right', fontWeight: 600 }}>
-                      ${totalSpend.toFixed(2)}
-                    </td>
-                  </tr>
-                </tfoot>
+            {/* KPI Cards */}
+            <section style={styles.kpiRow} aria-label="Key metrics">
+              <div style={styles.kpiCard}>
+                <span style={styles.kpiLabel}>Total Consumption</span>
+                <span style={styles.kpiValue}>
+                  {loading ? '—' : `${totalKwh.toLocaleString()} kWh`}
+                </span>
+              </div>
+              <div style={styles.kpiCard}>
+                <span style={styles.kpiLabel}>Monthly Average</span>
+                <span style={styles.kpiValue}>
+                  {loading ? '—' : `${avgKwh} kWh`}
+                </span>
+              </div>
+              <div style={styles.kpiCard}>
+                <span style={styles.kpiLabel}>Total Spend</span>
+                <span style={styles.kpiValue}>
+                  {loading ? '—' : `$${totalSpend.toFixed(2)}`}
+                </span>
+              </div>
+            </section>
+
+            {/* Chart */}
+            <section style={styles.card} aria-labelledby="chart-heading">
+              <h2 id="chart-heading" style={styles.sectionTitle}>
+                12-Month Consumption Chart
+              </h2>
+              {loading ? (
+                <div style={styles.emptyState}>Connecting to Electrify Grid…</div>
+              ) : records.length === 0 ? (
+                <div style={styles.emptyState}>
+                  <p style={{ margin: '0 0 8px' }}>No data found for Customer ID:</p>
+                  <code style={styles.subCode}>{userSub ?? '—'}</code>
+                  <p style={{ margin: '12px 0 0', fontSize: 13 }}>
+                    Ensure your seed script uses this exact ID as <strong>customerId</strong>.
+                  </p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart
+                    data={records}
+                    margin={{ top: 8, right: 16, left: 0, bottom: 8 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e4e7" />
+                    <XAxis dataKey="monthYear" tick={{ fontSize: 11 }} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} unit=" kWh" />
+                    <Tooltip
+                      formatter={(value: number) => [`${value} kWh`, 'Usage']}
+                      contentStyle={{ borderRadius: 8, border: '1px solid #e5e4e7' }}
+                    />
+                    <Legend />
+                    <Bar dataKey="kwhUsage" name="kWh Usage" fill="#aa3bff" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
               )}
-            </table>
+            </section>
+
+            {/* Table */}
+            <section style={styles.card} aria-labelledby="table-heading">
+              <h2 id="table-heading" style={styles.sectionTitle}>
+                Monthly Detail Table
+              </h2>
+              <div style={styles.tableWrapper}>
+                <table style={styles.table}>
+                  <thead>
+                    <tr>
+                      <th style={styles.th}>Month</th>
+                      <th style={{ ...styles.th, textAlign: 'right' }}>kWh Consumed</th>
+                      <th style={{ ...styles.th, textAlign: 'right' }}>Statement Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loading ? (
+                      <tr>
+                        <td colSpan={3} style={{ ...styles.td, textAlign: 'center', color: '#6b6375' }}>
+                          Connecting to Electrify Grid…
+                        </td>
+                      </tr>
+                    ) : records.length === 0 ? (
+                      <tr>
+                        <td colSpan={3} style={{ ...styles.td, textAlign: 'center', color: '#6b6375' }}>
+                          No records found.
+                        </td>
+                      </tr>
+                    ) : (
+                      records.map((row) => (
+                        <tr key={row.id} style={styles.tr}>
+                          <td style={styles.td}>{row.monthYear}</td>
+                          <td style={{ ...styles.td, textAlign: 'right' }}>
+                            {(row.kwhUsage ?? 0).toLocaleString()}
+                          </td>
+                          <td style={{ ...styles.td, textAlign: 'right' }}>
+                            ${(row.statementAmount ?? 0).toFixed(2)}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                  {records.length > 0 && !loading && (
+                    <tfoot>
+                      <tr>
+                        <td style={{ ...styles.td, fontWeight: 600 }}>Total</td>
+                        <td style={{ ...styles.td, textAlign: 'right', fontWeight: 600 }}>
+                          {totalKwh.toLocaleString()}
+                        </td>
+                        <td style={{ ...styles.td, textAlign: 'right', fontWeight: 600 }}>
+                          ${totalSpend.toFixed(2)}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+              </div>
+            </section>
           </div>
-        </section>
+
+          {/* ── Right column: Chat Assistant ── */}
+          <div style={styles.rightCol}>
+            <ChatAssistant username={username} />
+          </div>
+        </div>
       </main>
     </div>
   )
@@ -282,12 +282,9 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
   },
   main: {
-    maxWidth: 1100,
+    maxWidth: 1400,
     margin: '0 auto',
     padding: '28px 24px 48px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 24,
   },
   errorBanner: {
     background: '#fff0f0',
@@ -296,6 +293,24 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '12px 16px',
     color: '#b91c1c',
     fontSize: 14,
+    marginBottom: 24,
+  },
+  contentGrid: {
+    display: 'grid',
+    gridTemplateColumns: '3fr 2fr',
+    gap: 24,
+    alignItems: 'start',
+  },
+  leftCol: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 24,
+    minWidth: 0,  // prevents grid blowout on narrow screens
+  },
+  rightCol: {
+    position: 'sticky' as const,
+    top: 24,
+    minWidth: 0,
   },
   kpiRow: {
     display: 'grid',
