@@ -6,13 +6,13 @@ from decimal import Decimal
 
 # 1. Initialize DynamoDB Resource
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
-TABLE_NAME = 'ConsumptionRecord-o6wktlvbrvgydojj56vajcbiwy-NONE'
+TABLE_NAME = 'ConsumptionRecord-i6dt7ha4gvc6ph22qnhi2qopua-NONE'
 table = dynamodb.Table(TABLE_NAME)
 
 # ---------------------------------------------------------
 # 2. UPDATE THIS VALUE WITH YOUR ACTUAL COGNITO USER SUB ID
 # ---------------------------------------------------------
-CUSTOMER_ID = "44580488-7091-70d3-aa31-0a6b51e65b74"
+CUSTOMER_ID = "1478d408-e001-7050-632c-dc39d95ccff2"
 
 def seed_database():
     """Generates 12 months of random energy data and pushes it to DynamoDB."""
