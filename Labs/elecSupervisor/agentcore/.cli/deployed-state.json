@@ -1,0 +1,17 @@
+{
+  "targets": {
+    "default": {
+      "resources": {
+        "runtimes": {
+          "elecAgent": {
+            "runtimeId": "elecSupervisor_elecAgent-0hqF98DhBW",
+            "runtimeArn": "arn:aws:bedrock-agentcore:us-east-1:559846026818:runtime/elecSupervisor_elecAgent-0hqF98DhBW",
+            "roleArn": "arn:aws:iam::559846026818:role/AgentCore-elecSupervisor--ApplicationAgentElecAgent-DbFcCmTMZstQ"
+          }
+        },
+        "stackName": "AgentCore-elecSupervisor-default",
+        "deployHash": "57415c0f37955ca8"
+      }
+    }
+  }
+}
