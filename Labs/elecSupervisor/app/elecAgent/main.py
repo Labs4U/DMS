@@ -35,8 +35,14 @@ _table = _dynamodb.Table(TABLE_NAME)
 # ── Native Agent Tools ────────────────────────────────────────────────────────
 
 @tool
-def get_customer_bills(customerId: str, limit: int = 10) -> str:
-    """Fetch energy bill records for a customer from DynamoDB."""
+def get_customer_bills(customerId: str, limit: int = 12) -> str:
+    """
+    Retrieves the historical energy consumption bills for a specific customer from DynamoDB.
+    
+    Args:
+        customerId: The exact, hyphenated UUID string of the customer.
+        limit: The maximum number of monthly bills to retrieve. Default is 12.
+    """
     customerId = customerId.strip()
     if not customerId:
         return json.dumps({"error": "customerId is required."})

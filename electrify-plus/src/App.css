@@ -1,1 +1,201 @@
-/* App-level styles are handled via inline styles in App.tsx */
+/* ── Page ──────────────────────────────────────────────────────────────────── */
+
+.app-page {
+  min-height: 100svh;
+  background: #f9f8fc;
+  font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────────── */
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 32px;
+  background: #fff;
+  border-bottom: 1px solid #e5e4e7;
+}
+
+.app-header-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: #08060d;
+  letter-spacing: -0.4px;
+}
+
+.app-header-subtitle {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: #6b6375;
+}
+
+.app-sign-out-btn {
+  padding: 8px 18px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 8px;
+  border: 1px solid #e5e4e7;
+  background: #fff;
+  color: #08060d;
+  cursor: pointer;
+}
+
+/* ── Main ────────────────────────────────────────────────────────────────────── */
+
+.app-main {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 28px 24px 48px;
+}
+
+/* ── Error banner ────────────────────────────────────────────────────────────── */
+
+.app-error-banner {
+  background: #fff0f0;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: #b91c1c;
+  font-size: 14px;
+  margin-bottom: 24px;
+}
+
+/* ── Two-column content grid ─────────────────────────────────────────────────── */
+
+.app-content-grid {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.app-left-col {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0; /* prevents grid blowout on narrow screens */
+}
+
+.app-right-col {
+  position: sticky;
+  top: 24px;
+  min-width: 0;
+}
+
+/* ── KPI row ─────────────────────────────────────────────────────────────────── */
+
+.app-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.app-kpi-card {
+  background: #fff;
+  border: 1px solid #e5e4e7;
+  border-radius: 12px;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.app-kpi-label {
+  font-size: 13px;
+  color: #6b6375;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.app-kpi-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #08060d;
+  letter-spacing: -0.5px;
+}
+
+/* ── Card ────────────────────────────────────────────────────────────────────── */
+
+.app-card {
+  background: #fff;
+  border: 1px solid #e5e4e7;
+  border-radius: 12px;
+  padding: 24px 28px;
+}
+
+.app-section-title {
+  margin: 0 0 20px;
+  font-size: 17px;
+  font-weight: 600;
+  color: #08060d;
+  letter-spacing: -0.2px;
+}
+
+/* ── Empty / loading states ──────────────────────────────────────────────────── */
+
+.app-empty-state {
+  text-align: center;
+  padding: 48px 0;
+  color: #6b6375;
+  font-size: 14px;
+}
+
+.app-sub-code {
+  display: inline-block;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 13px;
+  padding: 4px 10px;
+  background: #f4f3ec;
+  border-radius: 6px;
+  color: #08060d;
+  word-break: break-all;
+}
+
+/* ── Table ───────────────────────────────────────────────────────────────────── */
+
+.app-table-wrapper {
+  overflow-x: auto;
+}
+
+.app-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.app-th {
+  padding: 10px 16px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b6375;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid #e5e4e7;
+  white-space: nowrap;
+}
+
+.app-th--right {
+  text-align: right;
+}
+
+.app-td {
+  padding: 12px 16px;
+  color: #08060d;
+  border-bottom: 1px solid #f3f2f5;
+}
+
+.app-td--right {
+  text-align: right;
+}
+
+.app-td--bold {
+  font-weight: 600;
+}
+
+.app-tr {
+  transition: background 0.15s;
+}

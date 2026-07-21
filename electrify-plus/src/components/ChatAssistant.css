@@ -1,0 +1,197 @@
+/* ── Panel ───────────────────────────────────────────────────────────────────── */
+
+.ca-panel {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid #e5e4e7;
+  border-radius: 12px;
+  overflow: hidden;
+  height: 100%;
+  min-height: 520px;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────────── */
+
+.ca-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid #e5e4e7;
+  flex-shrink: 0;
+}
+
+.ca-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ca-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.ca-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #08060d;
+}
+
+.ca-subtitle {
+  margin: 0;
+  font-size: 11px;
+  color: #aa3bff;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+.ca-clear-btn {
+  font-size: 12px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1px solid #e5e4e7;
+  background: #fff;
+  color: #6b6375;
+  cursor: pointer;
+}
+
+/* ── Message list ────────────────────────────────────────────────────────────── */
+
+.ca-message-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── Bubbles ─────────────────────────────────────────────────────────────────── */
+
+.ca-bubble {
+  max-width: 85%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.ca-bubble--agent {
+  align-self: flex-start;
+  background: #f4f3ec;
+  color: #08060d;
+  border-bottom-left-radius: 4px;
+}
+
+.ca-bubble--user {
+  align-self: flex-end;
+  background: #aa3bff;
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+/* ── Thinking indicator ──────────────────────────────────────────────────────── */
+
+.ca-bubble--thinking {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  padding: 12px 16px;
+}
+
+.ca-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #9ca3af;
+  display: inline-block;
+  animation: ca-pulse 1.2s ease-in-out infinite;
+}
+
+.ca-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.ca-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes ca-pulse {
+  0%, 80%, 100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ── Suggested prompts ───────────────────────────────────────────────────────── */
+
+.ca-prompt-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 14px 12px;
+  flex-shrink: 0;
+}
+
+.ca-prompt-pill {
+  align-self: flex-start;
+  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid #e0d7f7;
+  background: rgba(170, 59, 255, 0.06);
+  color: #7c3aed;
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+}
+
+/* ── Input area ──────────────────────────────────────────────────────────────── */
+
+.ca-input-row {
+  display: flex;
+  gap: 8px;
+  padding: 12px 14px;
+  border-top: 1px solid #e5e4e7;
+  flex-shrink: 0;
+}
+
+.ca-input {
+  flex: 1;
+  font-size: 13px;
+  padding: 9px 14px;
+  border-radius: 8px;
+  border: 1px solid #e5e4e7;
+  background: #f9f8fc;
+  color: #08060d;
+  outline: none;
+}
+
+.ca-send-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: none;
+  background: #aa3bff;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ca-send-btn:disabled {
+  background: #e5e4e7;
+  color: #9ca3af;
+  cursor: not-allowed;
+}

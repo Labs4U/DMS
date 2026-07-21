@@ -14,6 +14,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import ChatAssistant from './components/ChatAssistant'
+import './App.css'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -41,7 +42,6 @@ function Dashboard() {
       const session = await fetchAuthSession()
       const payload = session.tokens?.idToken?.payload
       const sub = payload?.sub as string | undefined
-      // Prefer the email prefix or Cognito preferred_username as display name
       const email = payload?.email as string | undefined
       setUsername(email ? email.split('@')[0] : undefined)
 
@@ -81,65 +81,65 @@ function Dashboard() {
   const avgKwh = records.length > 0 ? Math.round(totalKwh / records.length) : 0
 
   return (
-    <div style={styles.page}>
+    <div className="app-page">
       {/* ── Header ── */}
-      <header style={styles.header}>
+      <header className="app-header">
         <div>
-          <h1 style={styles.headerTitle}>Electrify! Plus Dashboard</h1>
-          <p style={styles.headerSubtitle}>12-month energy consumption overview</p>
+          <h1 className="app-header-title">Electrify! Plus Dashboard</h1>
+          <p className="app-header-subtitle">12-month energy consumption overview</p>
         </div>
-        <button onClick={signOut} style={styles.signOutBtn} type="button">
+        <button onClick={signOut} className="app-sign-out-btn" type="button">
           Sign Out
         </button>
       </header>
 
-      <main style={styles.main}>
+      <main className="app-main">
         {/* Error banner */}
         {error && (
-          <div role="alert" style={styles.errorBanner}>
+          <div role="alert" className="app-error-banner">
             {error}
           </div>
         )}
 
         {/* ── Two-column grid: data (60%) + chat (40%) ── */}
-        <div style={styles.contentGrid}>
+        <div className="app-content-grid">
 
           {/* ── Left column: KPIs + Chart + Table ── */}
-          <div style={styles.leftCol}>
+          <div className="app-left-col">
 
             {/* KPI Cards */}
-            <section style={styles.kpiRow} aria-label="Key metrics">
-              <div style={styles.kpiCard}>
-                <span style={styles.kpiLabel}>Total Consumption</span>
-                <span style={styles.kpiValue}>
+            <section className="app-kpi-row" aria-label="Key metrics">
+              <div className="app-kpi-card">
+                <span className="app-kpi-label">Total Consumption</span>
+                <span className="app-kpi-value">
                   {loading ? '—' : `${totalKwh.toLocaleString()} kWh`}
                 </span>
               </div>
-              <div style={styles.kpiCard}>
-                <span style={styles.kpiLabel}>Monthly Average</span>
-                <span style={styles.kpiValue}>
+              <div className="app-kpi-card">
+                <span className="app-kpi-label">Monthly Average</span>
+                <span className="app-kpi-value">
                   {loading ? '—' : `${avgKwh} kWh`}
                 </span>
               </div>
-              <div style={styles.kpiCard}>
-                <span style={styles.kpiLabel}>Total Spend</span>
-                <span style={styles.kpiValue}>
+              <div className="app-kpi-card">
+                <span className="app-kpi-label">Total Spend</span>
+                <span className="app-kpi-value">
                   {loading ? '—' : `$${totalSpend.toFixed(2)}`}
                 </span>
               </div>
             </section>
 
             {/* Chart */}
-            <section style={styles.card} aria-labelledby="chart-heading">
-              <h2 id="chart-heading" style={styles.sectionTitle}>
+            <section className="app-card" aria-labelledby="chart-heading">
+              <h2 id="chart-heading" className="app-section-title">
                 12-Month Consumption Chart
               </h2>
               {loading ? (
-                <div style={styles.emptyState}>Connecting to Electrify Grid…</div>
+                <div className="app-empty-state">Connecting to Electrify Grid…</div>
               ) : records.length === 0 ? (
-                <div style={styles.emptyState}>
+                <div className="app-empty-state">
                   <p style={{ margin: '0 0 8px' }}>No data found for Customer ID:</p>
-                  <code style={styles.subCode}>{userSub ?? '—'}</code>
+                  <code className="app-sub-code">{userSub ?? '—'}</code>
                   <p style={{ margin: '12px 0 0', fontSize: 13 }}>
                     Ensure your seed script uses this exact ID as <strong>customerId</strong>.
                   </p>
@@ -165,40 +165,40 @@ function Dashboard() {
             </section>
 
             {/* Table */}
-            <section style={styles.card} aria-labelledby="table-heading">
-              <h2 id="table-heading" style={styles.sectionTitle}>
+            <section className="app-card" aria-labelledby="table-heading">
+              <h2 id="table-heading" className="app-section-title">
                 Monthly Detail Table
               </h2>
-              <div style={styles.tableWrapper}>
-                <table style={styles.table}>
+              <div className="app-table-wrapper">
+                <table className="app-table">
                   <thead>
                     <tr>
-                      <th style={styles.th}>Month</th>
-                      <th style={{ ...styles.th, textAlign: 'right' }}>kWh Consumed</th>
-                      <th style={{ ...styles.th, textAlign: 'right' }}>Statement Amount</th>
+                      <th className="app-th">Month</th>
+                      <th className="app-th app-th--right">kWh Consumed</th>
+                      <th className="app-th app-th--right">Statement Amount</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={3} style={{ ...styles.td, textAlign: 'center', color: '#6b6375' }}>
+                        <td colSpan={3} className="app-td app-td--right" style={{ color: '#6b6375', textAlign: 'center' }}>
                           Connecting to Electrify Grid…
                         </td>
                       </tr>
                     ) : records.length === 0 ? (
                       <tr>
-                        <td colSpan={3} style={{ ...styles.td, textAlign: 'center', color: '#6b6375' }}>
+                        <td colSpan={3} className="app-td" style={{ textAlign: 'center', color: '#6b6375' }}>
                           No records found.
                         </td>
                       </tr>
                     ) : (
                       records.map((row) => (
-                        <tr key={row.id} style={styles.tr}>
-                          <td style={styles.td}>{row.monthYear}</td>
-                          <td style={{ ...styles.td, textAlign: 'right' }}>
+                        <tr key={row.id} className="app-tr">
+                          <td className="app-td">{row.monthYear}</td>
+                          <td className="app-td app-td--right">
                             {(row.kwhUsage ?? 0).toLocaleString()}
                           </td>
-                          <td style={{ ...styles.td, textAlign: 'right' }}>
+                          <td className="app-td app-td--right">
                             ${(row.statementAmount ?? 0).toFixed(2)}
                           </td>
                         </tr>
@@ -208,11 +208,11 @@ function Dashboard() {
                   {records.length > 0 && !loading && (
                     <tfoot>
                       <tr>
-                        <td style={{ ...styles.td, fontWeight: 600 }}>Total</td>
-                        <td style={{ ...styles.td, textAlign: 'right', fontWeight: 600 }}>
+                        <td className="app-td app-td--bold">Total</td>
+                        <td className="app-td app-td--right app-td--bold">
                           {totalKwh.toLocaleString()}
                         </td>
-                        <td style={{ ...styles.td, textAlign: 'right', fontWeight: 600 }}>
+                        <td className="app-td app-td--right app-td--bold">
                           ${totalSpend.toFixed(2)}
                         </td>
                       </tr>
@@ -224,8 +224,8 @@ function Dashboard() {
           </div>
 
           {/* ── Right column: Chat Assistant ── */}
-          <div style={styles.rightCol}>
-            <ChatAssistant username={username} />
+          <div className="app-right-col">
+            <ChatAssistant username={username} customerId={userSub ?? undefined} />
           </div>
         </div>
       </main>
@@ -241,158 +241,4 @@ export default function App() {
       <Dashboard />
     </Authenticator>
   )
-}
-
-// ── Styles ────────────────────────────────────────────────────────────────────
-
-const styles: Record<string, React.CSSProperties> = {
-  page: {
-    minHeight: '100svh',
-    background: '#f9f8fc',
-    fontFamily: 'system-ui, "Segoe UI", Roboto, sans-serif',
-  },
-  header: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '20px 32px',
-    background: '#fff',
-    borderBottom: '1px solid #e5e4e7',
-  },
-  headerTitle: {
-    margin: 0,
-    fontSize: 24,
-    fontWeight: 600,
-    color: '#08060d',
-    letterSpacing: '-0.4px',
-  },
-  headerSubtitle: {
-    margin: '4px 0 0',
-    fontSize: 14,
-    color: '#6b6375',
-  },
-  signOutBtn: {
-    padding: '8px 18px',
-    fontSize: 14,
-    fontWeight: 500,
-    borderRadius: 8,
-    border: '1px solid #e5e4e7',
-    background: '#fff',
-    color: '#08060d',
-    cursor: 'pointer',
-  },
-  main: {
-    maxWidth: 1400,
-    margin: '0 auto',
-    padding: '28px 24px 48px',
-  },
-  errorBanner: {
-    background: '#fff0f0',
-    border: '1px solid #fca5a5',
-    borderRadius: 8,
-    padding: '12px 16px',
-    color: '#b91c1c',
-    fontSize: 14,
-    marginBottom: 24,
-  },
-  contentGrid: {
-    display: 'grid',
-    gridTemplateColumns: '3fr 2fr',
-    gap: 24,
-    alignItems: 'start',
-  },
-  leftCol: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 24,
-    minWidth: 0,  // prevents grid blowout on narrow screens
-  },
-  rightCol: {
-    position: 'sticky' as const,
-    top: 24,
-    minWidth: 0,
-  },
-  kpiRow: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: 16,
-  },
-  kpiCard: {
-    background: '#fff',
-    border: '1px solid #e5e4e7',
-    borderRadius: 12,
-    padding: '20px 24px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 6,
-  },
-  kpiLabel: {
-    fontSize: 13,
-    color: '#6b6375',
-    fontWeight: 500,
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
-  },
-  kpiValue: {
-    fontSize: 28,
-    fontWeight: 700,
-    color: '#08060d',
-    letterSpacing: '-0.5px',
-  },
-  card: {
-    background: '#fff',
-    border: '1px solid #e5e4e7',
-    borderRadius: 12,
-    padding: '24px 28px',
-  },
-  sectionTitle: {
-    margin: '0 0 20px',
-    fontSize: 17,
-    fontWeight: 600,
-    color: '#08060d',
-    letterSpacing: '-0.2px',
-  },
-  emptyState: {
-    textAlign: 'center',
-    padding: '48px 0',
-    color: '#6b6375',
-    fontSize: 14,
-  },
-  subCode: {
-    display: 'inline-block',
-    fontFamily: 'ui-monospace, Consolas, monospace',
-    fontSize: 13,
-    padding: '4px 10px',
-    background: '#f4f3ec',
-    borderRadius: 6,
-    color: '#08060d',
-    wordBreak: 'break-all',
-  },
-  tableWrapper: {
-    overflowX: 'auto',
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse',
-    fontSize: 14,
-  },
-  th: {
-    padding: '10px 16px',
-    textAlign: 'left',
-    fontSize: 12,
-    fontWeight: 600,
-    color: '#6b6375',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
-    borderBottom: '2px solid #e5e4e7',
-    whiteSpace: 'nowrap',
-  },
-  td: {
-    padding: '12px 16px',
-    color: '#08060d',
-    borderBottom: '1px solid #f3f2f5',
-  },
-  tr: {
-    transition: 'background 0.15s',
-  },
 }
