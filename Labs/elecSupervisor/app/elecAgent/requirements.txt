@@ -1,4 +1,0 @@
-ollama
-boto3
-strands-agents
-bedrock-agentcore

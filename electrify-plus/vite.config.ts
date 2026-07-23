@@ -5,10 +5,11 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/api': {
-        target: 'http://localhost:8082', // The exact port from your traces
+      '/api-proxy': {
+        target: 'https://fb9hy2xuei.execute-api.us-east-1.amazonaws.com/dev',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''), // Strips /api before sending to AgentCore
+        secure: true,
+        rewrite: (path) => path.replace(/^\/api-proxy/, ''),
       },
     },
   },

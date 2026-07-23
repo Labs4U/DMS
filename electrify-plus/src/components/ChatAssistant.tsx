@@ -1,4 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
+import { fetchAuthSession } from 'aws-amplify/auth'
+import { v4 as uuidv4 } from 'uuid'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import './ChatAssistant.css'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -21,6 +25,83 @@ const SUGGESTED_PROMPTS = [
   'How can I reduce my bill?',
 ] as const
 
+// ── Environment config ────────────────────────────────────────────────────────
+
+const GATEWAY_URL = import.meta.env.VITE_AGENT_GATEWAY_URL || '/api/invocations'
+const IS_LOCAL = !import.meta.env.VITE_AGENT_GATEWAY_URL
+
+// ── Auth helper ───────────────────────────────────────────────────────────────
+
+async function getCognitoToken(): Promise<string | null> {
+  if (IS_LOCAL) return null
+  try {
+    const session = await fetchAuthSession()
+    return session.tokens?.accessToken?.toString() ?? null
+  } catch {
+    return null
+  }
+}
+
+// ── SSE / JSON response parser ────────────────────────────────────────────────
+
+// ── SSE / JSON response parser ────────────────────────────────────────────────
+
+function parseAgentResponse(rawText: string): string {
+  try {
+    // 1. Unwrap the Lambda proxy wrapper
+    const outer = JSON.parse(rawText);
+    
+    // Check for Lambda-level errors
+    if (outer.statusCode && outer.statusCode >= 400) {
+      return `⚠️ API Error: ${outer.body}`;
+    }
+
+    // Extract the inner payload (the SSE stream or flat JSON)
+    const bodyContent = outer.body ?? rawText;
+
+    // 2. Parse SSE Stream
+    if (typeof bodyContent === 'string' && bodyContent.includes('data:')) {
+      let text = '';
+      for (const line of bodyContent.split('\n')) {
+        const trimmedLine = line.trim();
+        if (!trimmedLine.startsWith('data:')) continue;
+        
+        const chunk = trimmedLine.slice(5).trim();
+        if (!chunk || chunk === '[DONE]') continue;
+        
+        try {
+          const parsedChunk = JSON.parse(chunk);
+          // Extract text from Bedrock's contentBlockDelta stream
+          text += parsedChunk?.event?.contentBlockDelta?.delta?.text ?? '';
+        } catch {
+          // Skip unparseable chunks
+        }
+      }
+      // If we successfully extracted text from the stream, return it
+      if (text) {
+        // 🛑 NEW: Strip out the internal <thinking> block so the customer doesn't see it
+        return text.replace(/<thinking>[\s\S]*?<\/thinking>\s*/g, '').trim();
+      }
+    }
+
+    // 3. Parse Flat JSON (if it wasn't a stream)
+    const candidate = typeof bodyContent === 'string' ? JSON.parse(bodyContent) : bodyContent;
+    if (candidate?.error || candidate?.errorMessage) {
+      return `⚠️ Agent error: ${candidate.error ?? candidate.errorMessage}`;
+    }
+    return (
+      candidate?.message ??
+      candidate?.response ??
+      candidate?.result ??
+      candidate?.content ??
+      rawText
+    );
+  } catch {
+    // Fallback if parsing fails completely
+    return rawText;
+  }
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function ChatAssistant({ username, customerId }: ChatAssistantProps) {
@@ -36,82 +117,77 @@ export default function ChatAssistant({ username, customerId }: ChatAssistantPro
   const [thinking, setThinking] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
 
-  // Scroll to latest message whenever messages change
+  // Stable session ID: use customerId when authenticated, otherwise a UUID
+  // that persists for the lifetime of this page load. The backend agent cache
+  // uses this to find the right SlidingWindowConversationManager instance.
+  const [guestSessionId] = useState(() => `guest-${uuidv4()}`)
+  const sessionId = customerId ?? guestSessionId
+
+  // Hardcoded test customer for local dev when no auth session exists
+  const TEST_CUSTOMER_ID = '1478d408-e001-7050-632c-dc39d95ccff2'
+  const activeCustomerId = customerId ?? TEST_CUSTOMER_ID
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, thinking])
 
-  // ── Real AgentCore API Integration ───────────────────────────────────────────
-  const sendMessage = async (prompt: string) => {
-    const trimmed = prompt.trim()
+  // ── Send message ──────────────────────────────────────────────────────────
+  const sendMessage = async (userPrompt: string) => {
+    const trimmed = userPrompt.trim()
     if (!trimmed || thinking) return
 
-    // 1. Add user message to UI immediately (exactly as they typed it)
     setMessages((prev) => [...prev, { role: 'user', content: trimmed }])
     setInput('')
     setThinking(true)
 
-    // 2. Invisible Context Injection
-    // We append the secure Cognito ID behind the scenes so the Waiter
-    // and the Agent explicitly know who is asking.
-    const enrichedMessage = `${trimmed}\n\n[SYSTEM CONTEXT: The currently authenticated user has customerId: ${customerId || 'unknown'}]`
-
+    // Inject customerId so the agent never needs to ask for it.
+    // The server's SlidingWindowConversationManager retains this context
+    // across turns — the frontend does NOT send history.
+    const enrichedPrompt = `${trimmed}\n\n[SYSTEM CONTEXT: The authenticated customerId is ${activeCustomerId}. CRITICAL RULE: You MUST format all billing data as a strict Markdown table using | Month | Usage | Amount |. Do NOT use bullet points.]`
     try {
-      const response = await fetch('/api/invocations', {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+
+      if (IS_LOCAL) {
+        headers['X-Agentcore-Local'] = 'true'
+      } else {
+        const token = await getCognitoToken()
+        if (token) headers['Authorization'] = `Bearer ${token}`
+      }
+
+      // Send only the current prompt + sessionId.
+      // Conversation history is managed server-side by SlidingWindowConversationManager.
+      // The agent cache key is sessionId, so the same window is reused across turns.
+      const response = await fetch(GATEWAY_URL, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Agentcore-Local': 'true',
-        },
+        headers,
         body: JSON.stringify({
-          message: enrichedMessage,
-          sessionId: customerId || 'guest-session',
+          prompt: enrichedPrompt,
+          sessionId,
         }),
       })
 
       if (!response.ok) {
-        const err = await response.text()
-        throw new Error(`AgentCore HTTP error! status: ${response.status} - ${err}`)
+        throw new Error(`HTTP ${response.status}: ${await response.text()}`)
       }
 
-      // 3. Parse the Server-Sent Events (SSE) stream
-      const rawText = await response.text()
-      let combinedText = ''
+      const replyText = parseAgentResponse(await response.text())
 
-      const lines = rawText.split('\n')
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const chunk = line.slice(6).trim()
-          if (chunk === '[DONE]') continue
-
-          try {
-            const parsed = JSON.parse(chunk)
-            if (typeof parsed === 'string') {
-              combinedText += parsed
-            } else {
-              combinedText += parsed.text || parsed.message || parsed.content || ''
-            }
-          } catch {
-            combinedText += chunk
-          }
-        }
-      }
-
-      // 4. Update the UI with the clean, combined text
       setMessages((prev) => [
         ...prev,
         {
           role: 'agent',
-          content: combinedText.trim() || 'Sorry, I received an empty response format.',
+          content: replyText.trim() || 'Received an empty response from the assistant.',
         },
       ])
     } catch (error) {
-      console.error('Agent API Connection Error:', error)
+      console.error('Agent error:', error)
       setMessages((prev) => [
         ...prev,
         {
           role: 'agent',
-          content: "⚠️ I couldn't reach the brain! Make sure the `agentcore dev` server is currently running in your terminal.",
+          content: IS_LOCAL
+            ? '⚠️ Unable to reach local agent. Make sure `uv run agentcore dev` is active.'
+            : '⚠️ Unable to connect to the Energy Assistant. Please try again.',
         },
       ])
     } finally {
@@ -156,12 +232,18 @@ export default function ChatAssistant({ username, customerId }: ChatAssistantPro
           <div
             key={i}
             className={`ca-bubble ${msg.role === 'user' ? 'ca-bubble--user' : 'ca-bubble--agent'}`}
+            style={msg.role === 'user' ? { whiteSpace: 'pre-wrap' } : {}}
           >
-            {msg.content}
+            {msg.role === 'agent' ? (
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {msg.content}
+              </ReactMarkdown>
+            ) : (
+              msg.content
+            )}
           </div>
         ))}
 
-        {/* Thinking indicator */}
         {thinking && (
           <div className="ca-bubble ca-bubble--agent ca-bubble--thinking">
             <span className="ca-dot" />
@@ -190,7 +272,7 @@ export default function ChatAssistant({ username, customerId }: ChatAssistantPro
         </div>
       )}
 
-      {/* ── Input area ── */}
+      {/* ── Input ── */}
       <form onSubmit={handleSubmit} className="ca-input-row" aria-label="Send a message">
         <input
           className="ca-input"

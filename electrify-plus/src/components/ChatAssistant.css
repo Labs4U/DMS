@@ -195,3 +195,27 @@
   color: #9ca3af;
   cursor: not-allowed;
 }
+
+/* ── Markdown Table Styling ── */
+.ca-bubble table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  font-size: 0.9em;
+}
+
+.ca-bubble th {
+  background-color: rgba(0, 0, 0, 0.05);
+  font-weight: 600;
+  text-align: left;
+}
+
+.ca-bubble th, .ca-bubble td {
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  padding: 8px 12px;
+}
+
+.ca-bubble--user th, .ca-bubble--user td {
+  border-color: rgba(255, 255, 255, 0.3);
+}

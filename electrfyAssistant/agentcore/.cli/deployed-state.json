@@ -1,0 +1,23 @@
+{
+  "targets": {
+    "default": {
+      "resources": {
+        "runtimes": {
+          "elecAgent": {
+            "runtimeId": "electrfyAssistant_elecAgent-o4rn0oAvzz",
+            "runtimeArn": "arn:aws:bedrock-agentcore:us-east-1:559846026818:runtime/electrfyAssistant_elecAgent-o4rn0oAvzz",
+            "roleArn": "arn:aws:iam::559846026818:role/AgentCore-electrfyAssista-ApplicationAgentElecAgent-WbVH4ayS7FW3"
+          }
+        },
+        "memories": {
+          "elecAgentMemory": {
+            "memoryId": "electrfyAssistant_elecAgentMemory-YOmmpz5DMZ",
+            "memoryArn": "arn:aws:bedrock-agentcore:us-east-1:559846026818:memory/electrfyAssistant_elecAgentMemory-YOmmpz5DMZ"
+          }
+        },
+        "stackName": "AgentCore-electrfyAssistant-default",
+        "deployHash": "c6326fa1b14d76aa"
+      }
+    }
+  }
+}
