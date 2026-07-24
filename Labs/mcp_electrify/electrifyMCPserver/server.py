@@ -81,6 +81,47 @@ def get_customer_bills(customerId: str, limit: int = 12) -> str:
         return json.dumps({"error": f"DynamoDB query failed: {str(exc)}"})
 
 
+
+
+
+@mcp.tool()
+def get_billing_chart(customerId: str, months: int = 12) -> str:
+    """
+    Use this tool ONLY when the user asks to see a chart, graph, or visual plot of their bills.
+    Retrieves the billing history and returns it in a strict JSON chart format.
+    """
+    customerId = customerId.strip()
+    if not customerId:
+        return "Error: customerId is required."
+
+    try:
+        response = get_table().query(
+            IndexName=GSI_NAME,
+            KeyConditionExpression=Key("customerId").eq(customerId),
+            ScanIndexForward=False,
+            Limit=months,
+        )
+        items = response.get("Items", [])
+        if not items:
+            return "No data available for chart."
+
+        # Recharts requires chronological order (oldest to newest, left to right)
+        items.reverse()
+
+        chart_data = []
+        for item in items:
+            chart_data.append({
+                "month": str(item.get("monthYear", "Unknown")),
+                "usage": float(item.get("kwhUsage", 0)),
+                "amount": float(item.get("statementAmount", 0))
+            })
+
+        chart_payload = json.dumps(chart_data)
+        # Wrap the JSON in the exact markdown block the React frontend is looking for
+        return f"```chart\n{chart_payload}\n```"
+
+    except Exception as exc:
+        return f"Error fetching chart data: {str(exc)}"
 # ── Entry point ───────────────────────────────────────────────────────────────
 # mcp.run() MUST be called unconditionally at module level.
 # AgentCore CodeZip executes server.py as a script (not an import), so the

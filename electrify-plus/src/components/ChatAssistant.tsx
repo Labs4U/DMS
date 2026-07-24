@@ -3,6 +3,7 @@ import { fetchAuthSession } from 'aws-amplify/auth'
 import { v4 as uuidv4 } from 'uuid'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import './ChatAssistant.css'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -21,7 +22,7 @@ interface ChatAssistantProps {
 
 const SUGGESTED_PROMPTS = [
   'Why is my bill higher this month?',
-  'Compare usage to last year',
+  'show me a chart of my last 12 months of bills',
   'How can I reduce my bill?',
 ] as const
 
@@ -44,19 +45,15 @@ async function getCognitoToken(): Promise<string | null> {
 
 // ── SSE / JSON response parser ────────────────────────────────────────────────
 
-// ── SSE / JSON response parser ────────────────────────────────────────────────
-
 function parseAgentResponse(rawText: string): string {
   try {
     // 1. Unwrap the Lambda proxy wrapper
     const outer = JSON.parse(rawText);
     
-    // Check for Lambda-level errors
     if (outer.statusCode && outer.statusCode >= 400) {
       return `⚠️ API Error: ${outer.body}`;
     }
 
-    // Extract the inner payload (the SSE stream or flat JSON)
     const bodyContent = outer.body ?? rawText;
 
     // 2. Parse SSE Stream
@@ -71,20 +68,18 @@ function parseAgentResponse(rawText: string): string {
         
         try {
           const parsedChunk = JSON.parse(chunk);
-          // Extract text from Bedrock's contentBlockDelta stream
           text += parsedChunk?.event?.contentBlockDelta?.delta?.text ?? '';
         } catch {
           // Skip unparseable chunks
         }
       }
-      // If we successfully extracted text from the stream, return it
       if (text) {
-        // 🛑 NEW: Strip out the internal <thinking> block so the customer doesn't see it
+        // Strip out the internal <thinking> block
         return text.replace(/<thinking>[\s\S]*?<\/thinking>\s*/g, '').trim();
       }
     }
 
-    // 3. Parse Flat JSON (if it wasn't a stream)
+    // 3. Parse Flat JSON
     const candidate = typeof bodyContent === 'string' ? JSON.parse(bodyContent) : bodyContent;
     if (candidate?.error || candidate?.errorMessage) {
       return `⚠️ Agent error: ${candidate.error ?? candidate.errorMessage}`;
@@ -97,7 +92,6 @@ function parseAgentResponse(rawText: string): string {
       rawText
     );
   } catch {
-    // Fallback if parsing fails completely
     return rawText;
   }
 }
@@ -117,11 +111,8 @@ export default function ChatAssistant({ username, customerId }: ChatAssistantPro
   const [thinking, setThinking] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
 
-  // Stable session ID: use customerId when authenticated, otherwise a UUID
-  // that persists for the lifetime of this page load. The backend agent cache
-  // uses this to find the right SlidingWindowConversationManager instance.
-  const [guestSessionId] = useState(() => `guest-${uuidv4()}`)
-  const sessionId = customerId ?? guestSessionId
+  // Force a fresh session on load to prevent AgentCore sliding window crashes
+  const [sessionId] = useState(() => `session-${uuidv4()}`)
 
   // Hardcoded test customer for local dev when no auth session exists
   const TEST_CUSTOMER_ID = '1478d408-e001-7050-632c-dc39d95ccff2'
@@ -139,11 +130,8 @@ export default function ChatAssistant({ username, customerId }: ChatAssistantPro
     setMessages((prev) => [...prev, { role: 'user', content: trimmed }])
     setInput('')
     setThinking(true)
-
-    // Inject customerId so the agent never needs to ask for it.
-    // The server's SlidingWindowConversationManager retains this context
-    // across turns — the frontend does NOT send history.
-    const enrichedPrompt = `${trimmed}\n\n[SYSTEM CONTEXT: The authenticated customerId is ${activeCustomerId}. CRITICAL RULE: You MUST format all billing data as a strict Markdown table using | Month | Usage | Amount |. Do NOT use bullet points.]`
+    // Only pass the customerId. Let main.py handle the formatting rules.
+    const enrichedPrompt = `${trimmed}\n\n[SYSTEM CONTEXT: The authenticated customerId is ${activeCustomerId}.]`
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
 
@@ -154,9 +142,6 @@ export default function ChatAssistant({ username, customerId }: ChatAssistantPro
         if (token) headers['Authorization'] = `Bearer ${token}`
       }
 
-      // Send only the current prompt + sessionId.
-      // Conversation history is managed server-side by SlidingWindowConversationManager.
-      // The agent cache key is sessionId, so the same window is reused across turns.
       const response = await fetch(GATEWAY_URL, {
         method: 'POST',
         headers,
@@ -235,7 +220,43 @@ export default function ChatAssistant({ username, customerId }: ChatAssistantPro
             style={msg.role === 'user' ? { whiteSpace: 'pre-wrap' } : {}}
           >
             {msg.role === 'agent' ? (
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  code({ node, inline, className, children, ...props }: any) {
+                    const match = /language-(\w+)/.exec(className || '')
+                    
+                    // Intercept chart blocks
+                    if (!inline && match && match[1] === 'chart') {
+                      try {
+                        const chartData = JSON.parse(String(children).replace(/\n$/, ''))
+                        return (
+                          <div style={{ width: '100%', minWidth: '250px', height: 250, marginTop: '15px' }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={chartData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#888' }} />
+                                <YAxis tick={{ fontSize: 12, fill: '#888' }} />
+                                <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
+                                <Bar dataKey="amount" fill="#8884d8" radius={[4, 4, 0, 0]} isAnimationActive={false} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        )
+                      } catch (e) {
+                        return <div style={{ color: 'red', marginTop: '10px' }}>⚠️ Error parsing chart data.</div>
+                      }
+                    }
+                    
+                    // Standard code block fallback
+                    return (
+                      <code className={className} {...props}>
+                        {children}
+                      </code>
+                    )
+                  }
+                }}
+              >
                 {msg.content}
               </ReactMarkdown>
             ) : (
