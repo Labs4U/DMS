@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
 import { fetchAuthSession } from 'aws-amplify/auth'
-import { v4 as uuidv4 } from 'uuid'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
@@ -112,7 +111,7 @@ export default function ChatAssistant({ username, customerId }: ChatAssistantPro
   const bottomRef = useRef<HTMLDivElement>(null)
 
   // Force a fresh session on load to prevent AgentCore sliding window crashes
-  const [sessionId] = useState(() => `session-${uuidv4()}`)
+  const [sessionId] = useState(() => `session-${crypto.randomUUID()}`)
 
   // Hardcoded test customer for local dev when no auth session exists
   const TEST_CUSTOMER_ID = '1478d408-e001-7050-632c-dc39d95ccff2'
@@ -223,7 +222,8 @@ export default function ChatAssistant({ username, customerId }: ChatAssistantPro
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{
-                  code({ node, inline, className, children, ...props }: any) {
+                  code({ className, children, ...props }: React.HTMLAttributes<HTMLElement> & { children?: React.ReactNode }) {
+                    const inline = !String(children).includes('\n')
                     const match = /language-(\w+)/.exec(className || '')
                     
                     // Intercept chart blocks
@@ -243,7 +243,7 @@ export default function ChatAssistant({ username, customerId }: ChatAssistantPro
                             </ResponsiveContainer>
                           </div>
                         )
-                      } catch (e) {
+                      } catch {
                         return <div style={{ color: 'red', marginTop: '10px' }}>⚠️ Error parsing chart data.</div>
                       }
                     }
