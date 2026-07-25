@@ -3,6 +3,7 @@ import { fetchAuthSession } from 'aws-amplify/auth'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
+import ReactMarkdown from 'react-markdown';
 import './ChatAssistant.css'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
