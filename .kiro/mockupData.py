@@ -6,7 +6,7 @@ from decimal import Decimal
 
 # 1. Initialize DynamoDB Resource
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
-TABLE_NAME = 'ConsumptionRecord-i6dt7ha4gvc6ph22qnhi2qopua-NONE'
+TABLE_NAME = 'ConsumptionRecord-lnnvd64opbhfxhyltf4knx6dxm-NONE'
 table = dynamodb.Table(TABLE_NAME)
 
 # ---------------------------------------------------------
@@ -44,7 +44,7 @@ def seed_database():
         # 3. Map Data to Amplify Model Expectations
         item = {
             "id": str(uuid.uuid4()),
-            "customerId": CUSTOMER_ID,  # 👈 AppSync now uses this for the owner check!
+            "customerId": CUSTOMER_ID,  # 👈 AppSync uses this for the owner check!
             "monthYear": month_year,
             "date": dummy_date,
             "kwhUsage": Decimal(str(kwh_usage)),

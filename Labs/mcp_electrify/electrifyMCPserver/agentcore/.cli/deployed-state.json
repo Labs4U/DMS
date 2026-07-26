@@ -1,0 +1,17 @@
+{
+  "targets": {
+    "default": {
+      "resources": {
+        "runtimes": {
+          "Agent1": {
+            "runtimeId": "electrifyMCPserver_Agent1-z6XBLwEBS7",
+            "runtimeArn": "arn:aws:bedrock-agentcore:us-east-1:559846026818:runtime/electrifyMCPserver_Agent1-z6XBLwEBS7",
+            "roleArn": "arn:aws:iam::559846026818:role/AgentCore-electrifyMCPser-ApplicationAgentAgent1Run-iEY1j42mbPoT"
+          }
+        },
+        "stackName": "AgentCore-electrifyMCPserver-default",
+        "deployHash": "f22489ec3f6ffc45"
+      }
+    }
+  }
+}

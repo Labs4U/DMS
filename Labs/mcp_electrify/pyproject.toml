@@ -5,7 +5,11 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "boto3>=1.43.51",
+    "aws-opentelemetry-distro>=0.18.0",
+    "bedrock-agentcore>=1.18.1",
+    "boto3>=1.43.52",
+    "fastapi>=0.139.2",
     "mcp[cli]>=1.28.1",
-    "pydantic>=2.13.4",
+    "opentelemetry-instrumentation>=0.63b1",
+    "uvicorn>=0.51.0",
 ]

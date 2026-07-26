@@ -1,0 +1,138 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Cognito-protected HTTP API Gateway proxy for Bedrock AgentCore Runtime (electrfyAssistant).
+  All requests must carry a valid Cognito JWT (issued by the Amplify user pool).
+  API Gateway re-signs outbound requests to AgentCore with SigV4 via an IAM execution role.
+
+# ── Parameters ────────────────────────────────────────────────────────────────
+Parameters:
+  # Filled in at deploy time — no sensitive values hardcoded.
+  CognitoUserPoolId:
+    Type: String
+    Default: "us-east-1_XQ5xfg9nO"
+    Description: Amplify Cognito User Pool ID
+
+  CognitoUserPoolClientId:
+    Type: String
+    Default: "39ut9ir859m9dclggb9qjl44f6"
+    Description: Amplify Cognito App Client ID
+
+  AgentCoreRuntimeArn:
+    Type: String
+    Default: "arn:aws:bedrock-agentcore:us-east-1:559846026818:runtime/electrfyAssistant_elecAgent-o4rn0oAvzz"
+    Description: ARN of the target Bedrock AgentCore Runtime
+
+  AllowedOrigins:
+    Type: CommaDelimitedList
+    Default: "http://localhost:5173,http://localhost:3000"
+    Description: Comma-separated list of CORS origins (add your deployed frontend URL here)
+
+# ── Resources ─────────────────────────────────────────────────────────────────
+Resources:
+
+  # ── IAM Role: API Gateway → AgentCore ─────────────────────────────────────
+  ApiGatewayAgentCoreRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "AgentCore-Proxy-APIGatewayRole-${AWS::StackName}"
+      Description: Allows API Gateway to invoke the Bedrock AgentCore runtime via SigV4
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: apigateway.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: InvokeAgentCoreRuntime
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock-agentcore:InvokeAgentRuntime
+                  - bedrock-agentcore:InvokeAgent
+                Resource: !Ref AgentCoreRuntimeArn
+
+  # ── HTTP API ───────────────────────────────────────────────────────────────
+  AgentCoreProxyApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: AgentCore-Proxy-API
+      ProtocolType: HTTP
+      Description: Cognito-protected proxy for Bedrock AgentCore Runtime
+      CorsConfiguration:
+        AllowOrigins: !Ref AllowedOrigins
+        AllowMethods:
+          - POST
+          - OPTIONS
+        AllowHeaders:
+          - Content-Type
+          - Authorization
+          - X-Agentcore-Local
+        ExposeHeaders:
+          - Content-Type
+        MaxAge: 300
+
+  # ── Cognito JWT Authorizer ─────────────────────────────────────────────────
+  CognitoJwtAuthorizer:
+    Type: AWS::ApiGatewayV2::Authorizer
+    Properties:
+      ApiId: !Ref AgentCoreProxyApi
+      AuthorizerType: JWT
+      Name: CognitoJWTAuthorizer
+      IdentitySource:
+        - "$request.header.Authorization"
+      JwtConfiguration:
+        Audience:
+          - !Ref CognitoUserPoolClientId
+        Issuer: !Sub "https://cognito-idp.${AWS::Region}.amazonaws.com/${CognitoUserPoolId}"
+
+  # ── Integration: HTTP_PROXY → AgentCore ───────────────────────────────────
+  AgentCoreIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref AgentCoreProxyApi
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: POST
+      # The full AgentCore invocation URL (ARN percent-encoded)
+      IntegrationUri: !Sub
+        - "https://bedrock-agentcore.${AWS::Region}.amazonaws.com/runtimes/${EncodedArn}/invocations?qualifier=DEFAULT"
+        - EncodedArn: "arn%3Aaws%3Abedrock-agentcore%3Aus-east-1%3A559846026818%3Aruntime%2FelectrfyAssistant_elecAgent-o4rn0oAvzz"
+      # SigV4 signing: API Gateway signs outbound requests using the IAM role
+      CredentialsArn: !GetAtt ApiGatewayAgentCoreRole.Arn
+      PayloadFormatVersion: "1.0"
+      TimeoutInMillis: 29000
+
+  # ── Route: POST /invocations ───────────────────────────────────────────────
+  InvocationsRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref AgentCoreProxyApi
+      RouteKey: "POST /invocations"
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoJwtAuthorizer
+      Target: !Sub "integrations/${AgentCoreIntegration}"
+
+  # ── Stage: prod (auto-deploy) ──────────────────────────────────────────────
+  ProdStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref AgentCoreProxyApi
+      StageName: prod
+      AutoDeploy: true
+      Description: Production stage — auto-deploys on route/integration changes
+
+# ── Outputs ───────────────────────────────────────────────────────────────────
+Outputs:
+  ApiGatewayUrl:
+    Description: >
+      The public HTTPS endpoint. Set this as VITE_AGENT_GATEWAY_URL in electrify-plus/.env
+      Format: https://<id>.execute-api.us-east-1.amazonaws.com/prod/invocations
+    Value: !Sub "https://${AgentCoreProxyApi}.execute-api.${AWS::Region}.amazonaws.com/prod/invocations"
+    Export:
+      Name: !Sub "${AWS::StackName}-ApiGatewayUrl"
+
+  AuthorizerIssuer:
+    Description: Cognito JWT issuer URL (for reference)
+    Value: !Sub "https://cognito-idp.${AWS::Region}.amazonaws.com/${CognitoUserPoolId}"

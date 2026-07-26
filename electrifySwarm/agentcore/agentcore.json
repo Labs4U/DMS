@@ -25,7 +25,7 @@
         },
         {
           "name": "TABLE_NAME",
-          "value": "ConsumptionRecord-o6wktlvbrvgydojj56vajcbiwy-NONE"
+          "value": "ConsumptionRecord-lnnvd64opbhfxhyltf4knx6dxm-NONE"
         }
       ],
       "networkMode": "PUBLIC",
@@ -97,8 +97,8 @@
                     "dynamodb:GetItem"
                   ],
                   "Resource": [
-                    "arn:aws:dynamodb:us-east-1:*:table/ConsumptionRecord-o6wktlvbrvgydojj56vajcbiwy-NONE",
-                    "arn:aws:dynamodb:us-east-1:*:table/ConsumptionRecord-o6wktlvbrvgydojj56vajcbiwy-NONE/index/*"
+                    "arn:aws:dynamodb:us-east-1:*:table/ConsumptionRecord-lnnvd64opbhfxhyltf4knx6dxm-NONE",
+                    "arn:aws:dynamodb:us-east-1:*:table/ConsumptionRecord-lnnvd64opbhfxhyltf4knx6dxm-NONE/index/*"
                   ]
                 }
               ]

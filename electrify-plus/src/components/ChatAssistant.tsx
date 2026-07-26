@@ -1,4 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
+import { fetchAuthSession } from 'aws-amplify/auth'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
+import './ChatAssistant.css'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -9,19 +14,90 @@ interface Message {
 
 interface ChatAssistantProps {
   username?: string
+  customerId?: string | null
 }
 
 // ── Suggested prompts ─────────────────────────────────────────────────────────
 
 const SUGGESTED_PROMPTS = [
   'Why is my bill higher this month?',
-  'Compare usage to last year',
+  'show me a chart of my last 12 months of bills',
   'How can I reduce my bill?',
 ] as const
 
+// ── Environment config ────────────────────────────────────────────────────────
+
+const GATEWAY_URL = import.meta.env.VITE_AGENT_GATEWAY_URL || '/api/invocations'
+const IS_LOCAL = !import.meta.env.VITE_AGENT_GATEWAY_URL
+
+// ── Auth helper ───────────────────────────────────────────────────────────────
+
+async function getCognitoToken(): Promise<string | null> {
+  if (IS_LOCAL) return null
+  try {
+    const session = await fetchAuthSession()
+    return session.tokens?.accessToken?.toString() ?? null
+  } catch {
+    return null
+  }
+}
+
+// ── SSE / JSON response parser ────────────────────────────────────────────────
+
+function parseAgentResponse(rawText: string): string {
+  try {
+    // 1. Unwrap the Lambda proxy wrapper
+    const outer = JSON.parse(rawText);
+    
+    if (outer.statusCode && outer.statusCode >= 400) {
+      return `⚠️ API Error: ${outer.body}`;
+    }
+
+    const bodyContent = outer.body ?? rawText;
+
+    // 2. Parse SSE Stream
+    if (typeof bodyContent === 'string' && bodyContent.includes('data:')) {
+      let text = '';
+      for (const line of bodyContent.split('\n')) {
+        const trimmedLine = line.trim();
+        if (!trimmedLine.startsWith('data:')) continue;
+        
+        const chunk = trimmedLine.slice(5).trim();
+        if (!chunk || chunk === '[DONE]') continue;
+        
+        try {
+          const parsedChunk = JSON.parse(chunk);
+          text += parsedChunk?.event?.contentBlockDelta?.delta?.text ?? '';
+        } catch {
+          // Skip unparseable chunks
+        }
+      }
+      if (text) {
+        // Strip out the internal <thinking> block
+        return text.replace(/<thinking>[\s\S]*?<\/thinking>\s*/g, '').trim();
+      }
+    }
+
+    // 3. Parse Flat JSON
+    const candidate = typeof bodyContent === 'string' ? JSON.parse(bodyContent) : bodyContent;
+    if (candidate?.error || candidate?.errorMessage) {
+      return `⚠️ Agent error: ${candidate.error ?? candidate.errorMessage}`;
+    }
+    return (
+      candidate?.message ??
+      candidate?.response ??
+      candidate?.result ??
+      candidate?.content ??
+      rawText
+    );
+  } catch {
+    return rawText;
+  }
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function ChatAssistant({ username }: ChatAssistantProps) {
+export default function ChatAssistant({ username, customerId }: ChatAssistantProps) {
   const displayName = username ?? 'there'
 
   const [messages, setMessages] = useState<Message[]>([
@@ -34,32 +110,73 @@ export default function ChatAssistant({ username }: ChatAssistantProps) {
   const [thinking, setThinking] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
 
-  // Scroll to latest message whenever messages change
+  // Force a fresh session on load to prevent AgentCore sliding window crashes
+  const [sessionId] = useState(() => `session-${crypto.randomUUID()}`)
+
+  // Hardcoded test customer for local dev when no auth session exists
+  const TEST_CUSTOMER_ID = '1478d408-e001-7050-632c-dc39d95ccff2'
+  const activeCustomerId = customerId ?? TEST_CUSTOMER_ID
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, thinking])
 
-  // Placeholder — will be replaced with AgentCore API Gateway call
-  const sendMessage = async (prompt: string) => {
-    const trimmed = prompt.trim()
+  // ── Send message ──────────────────────────────────────────────────────────
+  const sendMessage = async (userPrompt: string) => {
+    const trimmed = userPrompt.trim()
     if (!trimmed || thinking) return
 
     setMessages((prev) => [...prev, { role: 'user', content: trimmed }])
     setInput('')
     setThinking(true)
+    // Only pass the customerId. Let main.py handle the formatting rules.
+    const enrichedPrompt = `${trimmed}\n\n[SYSTEM CONTEXT: The authenticated customerId is ${activeCustomerId}.]`
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
 
-    // Simulate network latency until real API is wired in
-    await new Promise((resolve) => setTimeout(resolve, 1200))
+      if (IS_LOCAL) {
+        headers['X-Agentcore-Local'] = 'true'
+      } else {
+        const token = await getCognitoToken()
+        if (token) headers['Authorization'] = `Bearer ${token}`
+      }
 
-    setMessages((prev) => [
-      ...prev,
-      {
-        role: 'agent',
-        content:
-          "I'm analysing your energy data now. This response will be powered by the AgentCore API once connected.",
-      },
-    ])
-    setThinking(false)
+      const response = await fetch(GATEWAY_URL, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          prompt: enrichedPrompt,
+          sessionId,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${await response.text()}`)
+      }
+
+      const replyText = parseAgentResponse(await response.text())
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'agent',
+          content: replyText.trim() || 'Received an empty response from the assistant.',
+        },
+      ])
+    } catch (error) {
+      console.error('Agent error:', error)
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'agent',
+          content: IS_LOCAL
+            ? '⚠️ Unable to reach local agent. Make sure `uv run agentcore dev` is active.'
+            : '⚠️ Unable to connect to the Energy Assistant. Please try again.',
+        },
+      ])
+    } finally {
+      setThinking(false)
+    }
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -78,41 +195,81 @@ export default function ChatAssistant({ username }: ChatAssistantProps) {
   }
 
   return (
-    <aside style={s.panel} aria-label="Energy Assistant chat">
+    <aside className="ca-panel" aria-label="Energy Assistant chat">
       {/* ── Header ── */}
-      <div style={s.header}>
-        <div style={s.headerLeft}>
-          <span style={s.icon} aria-hidden="true">⚡</span>
+      <div className="ca-header">
+        <div className="ca-header-left">
+          <span className="ca-icon" aria-hidden="true">⚡</span>
           <div>
-            <p style={s.title}>Energy Assistant</p>
-            <p style={s.subtitle}>Powered by AI</p>
+            <p className="ca-title">Energy Assistant</p>
+            <p className="ca-subtitle">Powered by AI</p>
           </div>
         </div>
-        <button onClick={clearChat} style={s.clearBtn} type="button">
+        <button onClick={clearChat} className="ca-clear-btn" type="button">
           Clear chat
         </button>
       </div>
 
       {/* ── Message list ── */}
-      <div style={s.messageList} role="log" aria-live="polite" aria-label="Chat messages">
+      <div className="ca-message-list" role="log" aria-live="polite" aria-label="Chat messages">
         {messages.map((msg, i) => (
           <div
             key={i}
-            style={{
-              ...s.bubble,
-              ...(msg.role === 'user' ? s.bubbleUser : s.bubbleAgent),
-            }}
+            className={`ca-bubble ${msg.role === 'user' ? 'ca-bubble--user' : 'ca-bubble--agent'}`}
+            style={msg.role === 'user' ? { whiteSpace: 'pre-wrap' } : {}}
           >
-            {msg.content}
+            {msg.role === 'agent' ? (
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  code({ className, children, ...props }: React.HTMLAttributes<HTMLElement> & { children?: React.ReactNode }) {
+                    const inline = !String(children).includes('\n')
+                    const match = /language-(\w+)/.exec(className || '')
+                    
+                    // Intercept chart blocks
+                    if (!inline && match && match[1] === 'chart') {
+                      try {
+                        const chartData = JSON.parse(String(children).replace(/\n$/, ''))
+                        return (
+                          <div style={{ width: '100%', minWidth: '250px', height: 250, marginTop: '15px' }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={chartData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#888' }} />
+                                <YAxis tick={{ fontSize: 12, fill: '#888' }} />
+                                <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
+                                <Bar dataKey="amount" fill="#8884d8" radius={[4, 4, 0, 0]} isAnimationActive={false} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        )
+                      } catch {
+                        return <div style={{ color: 'red', marginTop: '10px' }}>⚠️ Error parsing chart data.</div>
+                      }
+                    }
+                    
+                    // Standard code block fallback
+                    return (
+                      <code className={className} {...props}>
+                        {children}
+                      </code>
+                    )
+                  }
+                }}
+              >
+                {msg.content}
+              </ReactMarkdown>
+            ) : (
+              msg.content
+            )}
           </div>
         ))}
 
-        {/* Thinking indicator */}
         {thinking && (
-          <div style={{ ...s.bubble, ...s.bubbleAgent, ...s.thinking }}>
-            <span style={s.dot} />
-            <span style={s.dot} />
-            <span style={s.dot} />
+          <div className="ca-bubble ca-bubble--agent ca-bubble--thinking">
+            <span className="ca-dot" />
+            <span className="ca-dot" />
+            <span className="ca-dot" />
           </div>
         )}
 
@@ -121,12 +278,12 @@ export default function ChatAssistant({ username }: ChatAssistantProps) {
 
       {/* ── Suggested prompts ── */}
       {messages.length <= 1 && !thinking && (
-        <div style={s.promptRow} role="list" aria-label="Suggested questions">
+        <div className="ca-prompt-row" role="list" aria-label="Suggested questions">
           {SUGGESTED_PROMPTS.map((p) => (
             <button
               key={p}
               role="listitem"
-              style={s.promptPill}
+              className="ca-prompt-pill"
               type="button"
               onClick={() => void sendMessage(p)}
             >
@@ -136,10 +293,10 @@ export default function ChatAssistant({ username }: ChatAssistantProps) {
         </div>
       )}
 
-      {/* ── Input area ── */}
-      <form onSubmit={handleSubmit} style={s.inputRow} aria-label="Send a message">
+      {/* ── Input ── */}
+      <form onSubmit={handleSubmit} className="ca-input-row" aria-label="Send a message">
         <input
-          style={s.input}
+          className="ca-input"
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -148,10 +305,7 @@ export default function ChatAssistant({ username }: ChatAssistantProps) {
           aria-label="Message input"
         />
         <button
-          style={{
-            ...s.sendBtn,
-            ...((!input.trim() || thinking) ? s.sendBtnDisabled : {}),
-          }}
+          className="ca-send-btn"
           type="submit"
           disabled={!input.trim() || thinking}
           aria-label="Send message"
@@ -161,155 +315,4 @@ export default function ChatAssistant({ username }: ChatAssistantProps) {
       </form>
     </aside>
   )
-}
-
-// ── Styles ────────────────────────────────────────────────────────────────────
-
-const s: Record<string, React.CSSProperties> = {
-  panel: {
-    display: 'flex',
-    flexDirection: 'column',
-    background: '#fff',
-    border: '1px solid #e5e4e7',
-    borderRadius: 12,
-    overflow: 'hidden',
-    height: '100%',
-    minHeight: 520,
-  },
-  header: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '14px 18px',
-    borderBottom: '1px solid #e5e4e7',
-    flexShrink: 0,
-  },
-  headerLeft: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-  },
-  icon: {
-    fontSize: 22,
-    lineHeight: 1,
-  },
-  title: {
-    margin: 0,
-    fontSize: 14,
-    fontWeight: 600,
-    color: '#08060d',
-  },
-  subtitle: {
-    margin: 0,
-    fontSize: 11,
-    color: '#aa3bff',
-    fontWeight: 500,
-    letterSpacing: '0.3px',
-  },
-  clearBtn: {
-    fontSize: 12,
-    padding: '5px 12px',
-    borderRadius: 6,
-    border: '1px solid #e5e4e7',
-    background: '#fff',
-    color: '#6b6375',
-    cursor: 'pointer',
-  },
-  messageList: {
-    flex: 1,
-    overflowY: 'auto',
-    padding: '16px 14px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 10,
-  },
-  bubble: {
-    maxWidth: '85%',
-    padding: '10px 14px',
-    borderRadius: 12,
-    fontSize: 13,
-    lineHeight: 1.5,
-    wordBreak: 'break-word',
-  },
-  bubbleAgent: {
-    alignSelf: 'flex-start',
-    background: '#f4f3ec',
-    color: '#08060d',
-    borderBottomLeftRadius: 4,
-  },
-  bubbleUser: {
-    alignSelf: 'flex-end',
-    background: '#aa3bff',
-    color: '#fff',
-    borderBottomRightRadius: 4,
-  },
-  thinking: {
-    display: 'flex',
-    gap: 5,
-    alignItems: 'center',
-    padding: '12px 16px',
-  },
-  dot: {
-    width: 7,
-    height: 7,
-    borderRadius: '50%',
-    background: '#9ca3af',
-    display: 'inline-block',
-    animation: 'pulse 1.2s ease-in-out infinite',
-  },
-  promptRow: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 6,
-    padding: '0 14px 12px',
-    flexShrink: 0,
-  },
-  promptPill: {
-    alignSelf: 'flex-start',
-    fontSize: 12,
-    padding: '6px 14px',
-    borderRadius: 20,
-    border: '1px solid #e0d7f7',
-    background: 'rgba(170,59,255,0.06)',
-    color: '#7c3aed',
-    cursor: 'pointer',
-    textAlign: 'left',
-    whiteSpace: 'nowrap',
-  },
-  inputRow: {
-    display: 'flex',
-    gap: 8,
-    padding: '12px 14px',
-    borderTop: '1px solid #e5e4e7',
-    flexShrink: 0,
-  },
-  input: {
-    flex: 1,
-    fontSize: 13,
-    padding: '9px 14px',
-    borderRadius: 8,
-    border: '1px solid #e5e4e7',
-    background: '#f9f8fc',
-    color: '#08060d',
-    outline: 'none',
-  },
-  sendBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    border: 'none',
-    background: '#aa3bff',
-    color: '#fff',
-    fontSize: 16,
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  sendBtnDisabled: {
-    background: '#e5e4e7',
-    color: '#9ca3af',
-    cursor: 'not-allowed',
-  },
 }

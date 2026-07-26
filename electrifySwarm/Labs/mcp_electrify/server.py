@@ -7,7 +7,7 @@ This server exposes a tool that queries the ConsumptionRecord DynamoDB table
 using the customerId-monthYear GSI, returning the raw records as a JSON string
 for the Supervisor Agent (or DataViz server) to process.
 
-Table  : ConsumptionRecord-o6wktlvbrvgydojj56vajcbiwy-NONE
+Table  : ConsumptionRecord-lnnvd64opbhfxhyltf4knx6dxm-NONE
 GSI    : customerId-monthYear-index  (partition key: customerId, sort key: monthYear)
 Region : us-east-1 (override via TABLE_REGION env var)
 
@@ -46,7 +46,7 @@ logging.basicConfig(
 # Override via TABLE_NAME env var if the sandbox ID changes.
 TABLE_NAME: str = os.environ.get(
     "TABLE_NAME",
-    "ConsumptionRecord-o6wktlvbrvgydojj56vajcbiwy-NONE",
+    "ConsumptionRecord-lnnvd64opbhfxhyltf4knx6dxm-NONE",
 )
 
 # The GSI name created by:
