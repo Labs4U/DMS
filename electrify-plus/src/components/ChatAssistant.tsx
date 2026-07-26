@@ -20,7 +20,7 @@ interface ChatAssistantProps {
 // ── Suggested prompts ─────────────────────────────────────────────────────────
 
 const SUGGESTED_PROMPTS = [
-  'Why is my bill higher this month?',
+  'Why is my bill higher this month ?',
   'show me a chart of my last 12 months of bills',
   'How can I reduce my bill?',
 ] as const
