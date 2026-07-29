@@ -3,6 +3,7 @@ import { Authenticator, useAuthenticator } from '@aws-amplify/ui-react'
 import { generateClient } from 'aws-amplify/data'
 import { fetchAuthSession } from 'aws-amplify/auth'
 import type { Schema } from '../amplify/data/resource'
+
 import {
   BarChart,
   Bar,
@@ -15,7 +16,10 @@ import {
 } from 'recharts'
 import ChatAssistant from './components/ChatAssistant'
 import './App.css'
+import { Amplify } from 'aws-amplify';
+import outputs from '../amplify_outputs.json'; // adjust path as needed
 
+Amplify.configure(outputs);
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type ConsumptionRecord = Schema['ConsumptionRecord']['type']
