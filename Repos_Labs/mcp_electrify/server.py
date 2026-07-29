@@ -6,7 +6,7 @@ Strands orchestrator / local MCP endpoint.
 Exposes DynamoDB query tools so a Strands agent can fetch ConsumptionRecord
 data without any direct AWS SDK calls in the orchestrator.
 
-Table  : ConsumptionRecord-lnnvd64opbhfxhyltf4knx6dxm-NONE
+Table  : ConsumptionRecord-2ql236iyard5fmfu73m24wsl5q-NONE
 GSI    : customerId-monthYear-index
          Partition key : customerId  (also the Amplify owner field)
          Sort key      : monthYear   (YYYY-MM strings, lexicographic order)
@@ -40,7 +40,7 @@ logging.basicConfig(
 # ── Configuration ─────────────────────────────────────────────────────────────
 
 # New sandbox table — updated from mockupData.py
-TABLE_NAME = "ConsumptionRecord-lnnvd64opbhfxhyltf4knx6dxm-NONE"
+TABLE_NAME = "ConsumptionRecord-2ql236iyard5fmfu73m24wsl5q-NONE"
 
 # GSI created by:
 #   index("customerId").sortKeys(["monthYear"]).queryField("listByCustomerAndMonth")
@@ -169,7 +169,7 @@ if __name__ == "__main__":
 
     Required AWS credentials:
         dynamodb:Query on:
-          arn:aws:dynamodb:us-east-1:*:table/ConsumptionRecord-lnnvd64opbhfxhyltf4knx6dxm-NONE
-          arn:aws:dynamodb:us-east-1:*:table/ConsumptionRecord-lnnvd64opbhfxhyltf4knx6dxm-NONE/index/*
+          arn:aws:dynamodb:us-east-1:*:table/ConsumptionRecord-*
+          arn:aws:dynamodb:us-east-1:*:table/ConsumptionRecord-*/index/*
     """
     server.run(transport="stdio")

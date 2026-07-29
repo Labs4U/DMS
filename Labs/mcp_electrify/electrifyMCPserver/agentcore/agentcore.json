@@ -10,10 +10,10 @@
   "runtimes": [
     {
       "name": "Agent1",
-      "build": "CodeZip",
+      "build": "Container",
       "entrypoint": "server.py",
+      "dockerfilePath": "Dockerfile",
       "codeLocation": "./",
-      "runtimeVersion": "PYTHON_3_14",
       "networkMode": "PUBLIC",
       "protocol": "MCP"
     }

@@ -1,0 +1,16 @@
+# CDK synthesis output — must be excluded to prevent recursive asset bundling
+agentcore/cdk/cdk.out
+agentcore/.cache
+agentcore/.cli/logs
+
+# Python artifacts
+.venv
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+
+# Dev/test files
+test_client.py
+AGENTS.md
+README.md

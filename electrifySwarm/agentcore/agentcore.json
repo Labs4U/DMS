@@ -1,192 +1,42 @@
 {
   "$schema": "https://schema.agentcore.aws.dev/v1/agentcore.json",
-  "name": "electrifySwarm",
+  "name": "electrifyMCPserver",
   "version": 1,
   "managedBy": "CDK",
-  "tags": {
-    "agentcore:created-by": "agentcore-cli",
-    "agentcore:project-name": "electrifySwarm"
-  },
   "runtimes": [
     {
-      "name": "energy_assistant",
+      "name": "electrifyMCPserver_Agent1",
       "build": "CodeZip",
-      "entrypoint": "app_core.py",
-      "codeLocation": "Labs/swarm_supervisor/",
-      "runtimeVersion": "PYTHON_3_14",
+      "entrypoint": "server.py",
+      "codeLocation": "Labs/mcp_electrify/electrifyMCPserver/",
+      "runtimeVersion": "PYTHON_3_12",
+      "networkMode": "PUBLIC",
+      "protocol": "HTTP",
       "envVars": [
         {
           "name": "AWS_REGION",
           "value": "us-east-1"
-        },
-        {
-          "name": "BEDROCK_MODEL_ID",
-          "value": "us.anthropic.claude-3-5-sonnet-20241022-v2:0"
-        },
-        {
-          "name": "TABLE_NAME",
-          "value": "ConsumptionRecord-lnnvd64opbhfxhyltf4knx6dxm-NONE"
         }
       ],
-      "networkMode": "PUBLIC",
-      "protocol": "HTTP"
-    }
-  ],
-  "memories": [],
-  "credentials": [],
-  "evaluators": [],
-  "onlineEvalConfigs": [],
-  "agentCoreGateways": [
-    {
-      "name": "electrify-mcp-gateway",
-      "description": "MCP gateway exposing DynamoDB data fetch and Recharts formatting tools to the Electrify! Plus supervisor agent.",
-      "targets": [
-        {
-          "name": "electrify-dynamo-server",
-          "targetType": "lambda",
-          "toolDefinitions": [
-            {
-              "name": "get_historical_usage",
-              "description": "Queries the ConsumptionRecord DynamoDB table via the customerId-monthYear GSI and returns all energy usage records for the given customer as a JSON array.",
-              "inputSchema": {
-                "type": "object",
-                "properties": {
-                  "customer_id": {
-                    "type": "string",
-                    "description": "The Cognito sub UUID of the authenticated user (partition key on the GSI)."
-                  },
-                  "start_month": {
-                    "type": "string",
-                    "description": "Optional. Earliest monthYear to include (YYYY-MM)."
-                  },
-                  "end_month": {
-                    "type": "string",
-                    "description": "Optional. Latest monthYear to include (YYYY-MM)."
-                  }
-                },
-                "required": [
-                  "customer_id"
-                ]
-              }
-            }
-          ],
-          "compute": {
-            "host": "AgentCoreRuntime",
-            "implementation": {
-              "language": "Python",
-              "path": "Labs/mcp_electrify/server.py",
-              "handler": "lambda_handler"
-            },
-            "runtime": {
-              "artifact": "CodeZip",
-              "pythonVersion": "PYTHON_3_12",
-              "name": "electrify_dynamo_runtime",
-              "entrypoint": "server.py",
-              "codeLocation": "Labs/mcp_electrify/",
-              "networkMode": "PUBLIC",
-              "description": "Electrify DynamoDB MCP server — queries ConsumptionRecord via GSI"
-            },
-            "iamPolicy": {
-              "Version": "2012-10-17",
-              "Statement": [
-                {
-                  "Sid": "QueryConsumptionRecordGSI",
-                  "Effect": "Allow",
-                  "Action": [
-                    "dynamodb:Query",
-                    "dynamodb:GetItem"
-                  ],
-                  "Resource": [
-                    "arn:aws:dynamodb:us-east-1:*:table/ConsumptionRecord-lnnvd64opbhfxhyltf4knx6dxm-NONE",
-                    "arn:aws:dynamodb:us-east-1:*:table/ConsumptionRecord-lnnvd64opbhfxhyltf4knx6dxm-NONE/index/*"
-                  ]
-                }
-              ]
-            }
+      "iamPolicy": {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Sid": "QueryConsumptionRecordGSI",
+            "Effect": "Allow",
+            "Action": [
+              "dynamodb:Query",
+              "dynamodb:GetItem",
+              "dynamodb:PutItem",
+              "dynamodb:BatchGetItem"
+            ],
+            "Resource": [
+              "arn:aws:dynamodb:us-east-1:*:table/ConsumptionRecord-*",
+              "arn:aws:dynamodb:us-east-1:*:table/ConsumptionRecord-*/index/*"
+            ]
           }
-        },
-        {
-          "name": "dataviz-formatting-server",
-          "targetType": "lambda",
-          "toolDefinitions": [
-            {
-              "name": "format_bar_chart",
-              "description": "Transforms a raw DynamoDB JSON string into a Recharts-compatible JSON array with shape [{name, kWh, cost}]. Sorted ascending by monthYear.",
-              "inputSchema": {
-                "type": "object",
-                "properties": {
-                  "raw_dynamodb_json": {
-                    "type": "string",
-                    "description": "JSON string of DynamoDB items — plain list, Query envelope, or single item."
-                  }
-                },
-                "required": [
-                  "raw_dynamodb_json"
-                ]
-              }
-            },
-            {
-              "name": "summarise_usage",
-              "description": "Returns a plain-text energy usage summary: total kWh, monthly average, peak month, lowest month, and total spend.",
-              "inputSchema": {
-                "type": "object",
-                "properties": {
-                  "raw_dynamodb_json": {
-                    "type": "string",
-                    "description": "Same format as format_bar_chart."
-                  }
-                },
-                "required": [
-                  "raw_dynamodb_json"
-                ]
-              }
-            }
-          ],
-          "compute": {
-            "host": "AgentCoreRuntime",
-            "implementation": {
-              "language": "Python",
-              "path": "Labs/mcp_dataviz/server.py",
-              "handler": "lambda_handler"
-            },
-            "runtime": {
-              "artifact": "CodeZip",
-              "pythonVersion": "PYTHON_3_12",
-              "name": "dataviz_formatting_runtime",
-              "entrypoint": "server.py",
-              "codeLocation": "Labs/mcp_dataviz/",
-              "networkMode": "PUBLIC",
-              "description": "DataViz formatting MCP server — converts DynamoDB JSON to Recharts format"
-            },
-            "iamPolicy": {
-              "Version": "2012-10-17",
-              "Statement": [
-                {
-                  "Sid": "NoDynamoAccess",
-                  "Effect": "Deny",
-                  "Action": "dynamodb:*",
-                  "Resource": "*"
-                }
-              ]
-            }
-          }
-        }
-      ],
-      "authorizerType": "NONE",
-      "enableSemanticSearch": true,
-      "exceptionLevel": "NONE"
-    },
-    {
-      "name": "electrify-gateway",
-      "description": "Gateway for electrify-gateway",
-      "targets": [],
-      "authorizerType": "AWS_IAM",
-      "enableSemanticSearch": true,
-      "exceptionLevel": "NONE"
+        ]
+      }
     }
-  ],
-  "policyEngines": [],
-  "configBundles": [],
-  "abTests": [],
-  "httpGateways": []
+  ]
 }

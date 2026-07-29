@@ -1,0 +1,28 @@
+{
+  "targets": {
+    "default": {
+      "resources": {
+        "runtimes": {
+          "McpServer": {
+            "runtimeId": "AgentWks_McpServer-KsKAQnGnqi",
+            "runtimeArn": "arn:aws:bedrock-agentcore:us-east-1:559846026818:runtime/AgentWks_McpServer-KsKAQnGnqi",
+            "roleArn": "arn:aws:iam::559846026818:role/AgentCore-AgentWks-defaul-ApplicationAgentMcpServer-o8U374UIiSuu"
+          },
+          "elecMcpServer": {
+            "runtimeId": "AgentWks_elecMcpServer-ha471HFJzt",
+            "runtimeArn": "arn:aws:bedrock-agentcore:us-east-1:559846026818:runtime/AgentWks_elecMcpServer-ha471HFJzt",
+            "roleArn": "arn:aws:iam::559846026818:role/AgentCore-AgentWks-defaul-ApplicationAgentElecMcpSe-ZUma8XQpHbVT"
+          }
+        },
+        "memories": {
+          "McpServerMemory": {
+            "memoryId": "AgentWks_McpServerMemory-AiMAff7SDC",
+            "memoryArn": "arn:aws:bedrock-agentcore:us-east-1:559846026818:memory/AgentWks_McpServerMemory-AiMAff7SDC"
+          }
+        },
+        "stackName": "AgentCore-AgentWks-default",
+        "deployHash": "d9ff522c01bf7f20"
+      }
+    }
+  }
+}

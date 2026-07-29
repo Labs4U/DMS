@@ -27,7 +27,7 @@ mcp = FastMCP(
 AWS_REGION = os.environ.get("AWS_REGION", "us-east-1")
 TABLE_NAME = os.environ.get(
     "DYNAMODB_TABLE_NAME",
-    "ConsumptionRecord-lnnvd64opbhfxhyltf4knx6dxm-NONE",
+    "ConsumptionRecord-2ql236iyard5fmfu73m24wsl5q-NONE",
 )
 GSI_NAME = "consumptionRecordsByCustomerIdAndMonthYear"
 

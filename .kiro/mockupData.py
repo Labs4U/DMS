@@ -6,7 +6,7 @@ from decimal import Decimal
 
 # 1. Initialize DynamoDB Resource
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
-TABLE_NAME = 'ConsumptionRecord-lnnvd64opbhfxhyltf4knx6dxm-NONE'
+TABLE_NAME = 'ConsumptionRecord-2ql236iyard5fmfu73m24wsl5q-NONE'
 table = dynamodb.Table(TABLE_NAME)
 
 # ---------------------------------------------------------
