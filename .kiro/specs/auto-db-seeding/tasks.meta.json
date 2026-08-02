@@ -1,0 +1,211 @@
+{
+  "pbtResults": {
+    "4.2 Write property test for Property 1 — customerId propagation": {
+      "status": "passed",
+      "lastRunTimestamp": 1785673398350
+    },
+    "4.3 Write property test for Property 2 — field format and domain invariants": {
+      "status": "passed",
+      "lastRunTimestamp": 1785673411736
+    }
+  },
+  "executionHistory": {
+    "1.1 Create the seeder module with types, helper, and exported function": [
+      {
+        "executionId": "d626326e-e24c-4b23-9638-37c0cb683a30",
+        "chatSessionId": "sess_7b250a7f-efa7-4ee3-a97c-60230dba0cd6",
+        "timestamp": 1785672387229
+      },
+      {
+        "executionId": "d626326e-e24c-4b23-9638-37c0cb683a30",
+        "chatSessionId": "sess_7b250a7f-efa7-4ee3-a97c-60230dba0cd6",
+        "timestamp": 1785672469863
+      }
+    ],
+    "1. Create `src/utils/seedDatabase.ts`": [
+      {
+        "executionId": "d626326e-e24c-4b23-9638-37c0cb683a30",
+        "chatSessionId": "sess_7b250a7f-efa7-4ee3-a97c-60230dba0cd6",
+        "timestamp": 1785672469930
+      }
+    ],
+    "2. Update `src/App.tsx` — wire in the seeder": [
+      {
+        "executionId": "18e5a2ea-a878-4fb2-9d4a-7510f1404d71",
+        "chatSessionId": "sess_e2846b95-f95a-4438-adca-8f501954988e",
+        "timestamp": 1785672493570
+      },
+      {
+        "executionId": "18e5a2ea-a878-4fb2-9d4a-7510f1404d71",
+        "chatSessionId": "sess_e2846b95-f95a-4438-adca-8f501954988e",
+        "timestamp": 1785672636615
+      }
+    ],
+    "2.1 Add seeder import and session-guarded `useEffect` to `Dashboard`": [
+      {
+        "executionId": "fc216b02-8065-4718-b972-d93c346f3d35",
+        "chatSessionId": "sess_c07edc7c-391e-471b-b359-27f69628eca1",
+        "timestamp": 1785672792760
+      },
+      {
+        "executionId": "fc216b02-8065-4718-b972-d93c346f3d35",
+        "chatSessionId": "sess_c07edc7c-391e-471b-b359-27f69628eca1",
+        "timestamp": 1785672800090
+      },
+      {
+        "executionId": "fc216b02-8065-4718-b972-d93c346f3d35",
+        "chatSessionId": "sess_c07edc7c-391e-471b-b359-27f69628eca1",
+        "timestamp": 1785673080732
+      }
+    ],
+    "3.1 Install test devDependencies and configure Vitest": [
+      {
+        "executionId": "fc216b02-8065-4718-b972-d93c346f3d35",
+        "chatSessionId": "sess_c07edc7c-391e-471b-b359-27f69628eca1",
+        "timestamp": 1785672792791
+      },
+      {
+        "executionId": "fc216b02-8065-4718-b972-d93c346f3d35",
+        "chatSessionId": "sess_c07edc7c-391e-471b-b359-27f69628eca1",
+        "timestamp": 1785672800653
+      },
+      {
+        "executionId": "fc216b02-8065-4718-b972-d93c346f3d35",
+        "chatSessionId": "sess_c07edc7c-391e-471b-b359-27f69628eca1",
+        "timestamp": 1785673081467
+      }
+    ],
+    "4.1 Create `src/utils/seedDatabase.test.ts` with example-based tests for `checkAndSeedDatabase`": [
+      {
+        "executionId": "fc216b02-8065-4718-b972-d93c346f3d35",
+        "chatSessionId": "sess_c07edc7c-391e-471b-b359-27f69628eca1",
+        "timestamp": 1785672792818
+      },
+      {
+        "executionId": "fc216b02-8065-4718-b972-d93c346f3d35",
+        "chatSessionId": "sess_c07edc7c-391e-471b-b359-27f69628eca1",
+        "timestamp": 1785673088170
+      },
+      {
+        "executionId": "fc216b02-8065-4718-b972-d93c346f3d35",
+        "chatSessionId": "sess_c07edc7c-391e-471b-b359-27f69628eca1",
+        "timestamp": 1785673292449
+      }
+    ],
+    "5.1 Run TypeScript compilation and verify no type errors": [
+      {
+        "executionId": "fc216b02-8065-4718-b972-d93c346f3d35",
+        "chatSessionId": "sess_c07edc7c-391e-471b-b359-27f69628eca1",
+        "timestamp": 1785672792878
+      },
+      {
+        "executionId": "fc216b02-8065-4718-b972-d93c346f3d35",
+        "chatSessionId": "sess_c07edc7c-391e-471b-b359-27f69628eca1",
+        "timestamp": 1785673733558
+      },
+      {
+        "executionId": "fc216b02-8065-4718-b972-d93c346f3d35",
+        "chatSessionId": "sess_c07edc7c-391e-471b-b359-27f69628eca1",
+        "timestamp": 1785673775815
+      }
+    ],
+    "6. Final checkpoint — Ensure all tests pass": [
+      {
+        "executionId": "fc216b02-8065-4718-b972-d93c346f3d35",
+        "chatSessionId": "sess_c07edc7c-391e-471b-b359-27f69628eca1",
+        "timestamp": 1785672792909
+      },
+      {
+        "executionId": "fc216b02-8065-4718-b972-d93c346f3d35",
+        "chatSessionId": "sess_c07edc7c-391e-471b-b359-27f69628eca1",
+        "timestamp": 1785673780258
+      },
+      {
+        "executionId": "fc216b02-8065-4718-b972-d93c346f3d35",
+        "chatSessionId": "sess_c07edc7c-391e-471b-b359-27f69628eca1",
+        "timestamp": 1785673809820
+      }
+    ],
+    "3. Set up the test framework": [
+      {
+        "executionId": "fc216b02-8065-4718-b972-d93c346f3d35",
+        "chatSessionId": "sess_c07edc7c-391e-471b-b359-27f69628eca1",
+        "timestamp": 1785673081495
+      }
+    ],
+    "4. Write tests for `generateSeedRecords` (property-based) and `checkAndSeedDatabase` (example-based)": [
+      {
+        "executionId": "fc216b02-8065-4718-b972-d93c346f3d35",
+        "chatSessionId": "sess_c07edc7c-391e-471b-b359-27f69628eca1",
+        "timestamp": 1785673292483
+      }
+    ],
+    "4.2 Write property test for Property 1 — customerId propagation": [
+      {
+        "executionId": "fc216b02-8065-4718-b972-d93c346f3d35",
+        "chatSessionId": "sess_c07edc7c-391e-471b-b359-27f69628eca1",
+        "timestamp": 1785673311116
+      },
+      {
+        "executionId": "fc216b02-8065-4718-b972-d93c346f3d35",
+        "chatSessionId": "sess_c07edc7c-391e-471b-b359-27f69628eca1",
+        "timestamp": 1785673727705
+      }
+    ],
+    "4.3 Write property test for Property 2 — field format and domain invariants": [
+      {
+        "executionId": "fc216b02-8065-4718-b972-d93c346f3d35",
+        "chatSessionId": "sess_c07edc7c-391e-471b-b359-27f69628eca1",
+        "timestamp": 1785673311812
+      },
+      {
+        "executionId": "fc216b02-8065-4718-b972-d93c346f3d35",
+        "chatSessionId": "sess_c07edc7c-391e-471b-b359-27f69628eca1",
+        "timestamp": 1785673728594
+      }
+    ],
+    "4.4 Write property test for Property 3 — statementAmount derivation": [
+      {
+        "executionId": "fc216b02-8065-4718-b972-d93c346f3d35",
+        "chatSessionId": "sess_c07edc7c-391e-471b-b359-27f69628eca1",
+        "timestamp": 1785673312567
+      },
+      {
+        "executionId": "fc216b02-8065-4718-b972-d93c346f3d35",
+        "chatSessionId": "sess_c07edc7c-391e-471b-b359-27f69628eca1",
+        "timestamp": 1785673729109
+      }
+    ],
+    "4.5 Write property test for Property 4 — batch fault isolation": [
+      {
+        "executionId": "fc216b02-8065-4718-b972-d93c346f3d35",
+        "chatSessionId": "sess_c07edc7c-391e-471b-b359-27f69628eca1",
+        "timestamp": 1785673313290
+      },
+      {
+        "executionId": "fc216b02-8065-4718-b972-d93c346f3d35",
+        "chatSessionId": "sess_c07edc7c-391e-471b-b359-27f69628eca1",
+        "timestamp": 1785673729909
+      }
+    ],
+    "5.2 Run the full test suite": [
+      {
+        "executionId": "fc216b02-8065-4718-b972-d93c346f3d35",
+        "chatSessionId": "sess_c07edc7c-391e-471b-b359-27f69628eca1",
+        "timestamp": 1785673734109
+      },
+      {
+        "executionId": "fc216b02-8065-4718-b972-d93c346f3d35",
+        "chatSessionId": "sess_c07edc7c-391e-471b-b359-27f69628eca1",
+        "timestamp": 1785673776442
+      }
+    ],
+    "5. TypeScript and test verification checkpoint": [
+      {
+        "executionId": "fc216b02-8065-4718-b972-d93c346f3d35",
+        "chatSessionId": "sess_c07edc7c-391e-471b-b359-27f69628eca1",
+        "timestamp": 1785673775876
+      }
+    ]
+  }
+}

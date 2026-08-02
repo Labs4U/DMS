@@ -15,6 +15,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import ChatAssistant from './components/ChatAssistant'
+import { checkAndSeedDatabase } from './utils/seedDatabase'
 import './App.css'
 import { Amplify } from 'aws-amplify';
 import outputs from '../amplify_outputs.json'; // adjust path as needed
@@ -38,6 +39,7 @@ function Dashboard() {
   const [userSub, setUserSub] = useState<string | null>(null)
   const [username, setUsername] = useState<string | undefined>(undefined)
   const [error, setError] = useState<string | null>(null)
+  const [hasCheckedData, setHasCheckedData] = useState(false)
 
   const fetchRecords = useCallback(async () => {
     setLoading(true)
@@ -79,6 +81,12 @@ function Dashboard() {
   useEffect(() => {
     void fetchRecords()
   }, [fetchRecords])
+
+  useEffect(() => {
+    if (!userSub || hasCheckedData) return
+    setHasCheckedData(true)
+    void checkAndSeedDatabase(userSub).then(() => fetchRecords())
+  }, [userSub, hasCheckedData, fetchRecords])
 
   const totalKwh = records.reduce((sum, r) => sum + (r.kwhUsage ?? 0), 0)
   const totalSpend = records.reduce((sum, r) => sum + (r.statementAmount ?? 0), 0)
