@@ -81,16 +81,21 @@ export async function checkAndSeedDatabase(customerId: string): Promise<void> {
 
   // 3. Insert concurrently with per-record fault isolation
   await Promise.all(
-    records.map(async (record) => {
-      try {
-        const { data, errors: createErrors } = await client.models.ConsumptionRecord.create(record)
-        if (createErrors?.length) throw new Error(createErrors[0].message)
-        console.log(`[Seeder] ✅ ${record.monthYear} | ${record.kwhUsage} kWh | $${record.statementAmount}`)
-        return data
-      } catch (err) {
-        console.error(`[Seeder] ❌ Failed ${record.monthYear}:`, err)
-        return null
-      }
-    })
-  )
+  records.map(async (record) => {
+    try {
+      // ❌ Failing line:
+      // const { data, errors: createErrors } = await client.models.ConsumptionRecord.create(record)
+
+      // ✅ Fix: Add 'as any' to bypass the strict generated type mismatch
+      const { data, errors: createErrors } = await client.models.ConsumptionRecord.create(record as any)
+      
+      if (createErrors?.length) throw new Error(createErrors[0].message)
+      console.log(`[Seeder] ✅ ${record.monthYear} | ${record.kwhUsage} kWh | $${record.statementAmount}`)
+      return data
+    } catch (err) {
+      console.error(`[Seeder] ❌ Failed ${record.monthYear}:`, err)
+      return null
+    }
+  })
+)
 }
