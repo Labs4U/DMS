@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@aws-amplify/ui-react": "^6.15.4",
+    "@aws-sdk/client-bedrock-agentcore": "^3.1108.0",
     "aws-amplify": "^6.18.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",

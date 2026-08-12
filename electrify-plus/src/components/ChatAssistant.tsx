@@ -1,9 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
-import { fetchAuthSession } from 'aws-amplify/auth'
+import { generateClient } from 'aws-amplify/data'
+import type { Schema } from '../../amplify/data/resource'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import './ChatAssistant.css'
+
+// ── Amplify data client ───────────────────────────────────────────────────────
+
+const client = generateClient<Schema>()
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -24,76 +29,6 @@ const SUGGESTED_PROMPTS = [
   'show me a chart of my last 12 months of bills',
   'How can I reduce my bill?',
 ] as const
-
-// ── Environment config ────────────────────────────────────────────────────────
-
-const GATEWAY_URL = import.meta.env.VITE_AGENT_GATEWAY_URL || '/api/invocations'
-const IS_LOCAL = !import.meta.env.VITE_AGENT_GATEWAY_URL
-
-// ── Auth helper ───────────────────────────────────────────────────────────────
-
-async function getCognitoToken(): Promise<string | null> {
-  if (IS_LOCAL) return null
-  try {
-    const session = await fetchAuthSession()
-    return session.tokens?.accessToken?.toString() ?? null
-  } catch {
-    return null
-  }
-}
-
-// ── SSE / JSON response parser ────────────────────────────────────────────────
-
-function parseAgentResponse(rawText: string): string {
-  try {
-    // 1. Unwrap the Lambda proxy wrapper
-    const outer = JSON.parse(rawText);
-    
-    if (outer.statusCode && outer.statusCode >= 400) {
-      return `⚠️ API Error: ${outer.body}`;
-    }
-
-    const bodyContent = outer.body ?? rawText;
-
-    // 2. Parse SSE Stream
-    if (typeof bodyContent === 'string' && bodyContent.includes('data:')) {
-      let text = '';
-      for (const line of bodyContent.split('\n')) {
-        const trimmedLine = line.trim();
-        if (!trimmedLine.startsWith('data:')) continue;
-        
-        const chunk = trimmedLine.slice(5).trim();
-        if (!chunk || chunk === '[DONE]') continue;
-        
-        try {
-          const parsedChunk = JSON.parse(chunk);
-          text += parsedChunk?.event?.contentBlockDelta?.delta?.text ?? '';
-        } catch {
-          // Skip unparseable chunks
-        }
-      }
-      if (text) {
-        // Strip out the internal <thinking> block
-        return text.replace(/<thinking>[\s\S]*?<\/thinking>\s*/g, '').trim();
-      }
-    }
-
-    // 3. Parse Flat JSON
-    const candidate = typeof bodyContent === 'string' ? JSON.parse(bodyContent) : bodyContent;
-    if (candidate?.error || candidate?.errorMessage) {
-      return `⚠️ Agent error: ${candidate.error ?? candidate.errorMessage}`;
-    }
-    return (
-      candidate?.message ??
-      candidate?.response ??
-      candidate?.result ??
-      candidate?.content ??
-      rawText
-    );
-  } catch {
-    return rawText;
-  }
-}
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -129,32 +64,23 @@ export default function ChatAssistant({ username, customerId }: ChatAssistantPro
     setMessages((prev) => [...prev, { role: 'user', content: trimmed }])
     setInput('')
     setThinking(true)
+
     // Only pass the customerId. Let main.py handle the formatting rules.
     const enrichedPrompt = `${trimmed}\n\n[SYSTEM CONTEXT: The authenticated customerId is ${activeCustomerId}.]`
+
     try {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-
-      if (IS_LOCAL) {
-        headers['X-Agentcore-Local'] = 'true'
-      } else {
-        const token = await getCognitoToken()
-        if (token) headers['Authorization'] = `Bearer ${token}`
-      }
-
-      const response = await fetch(GATEWAY_URL, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          prompt: enrichedPrompt,
-          sessionId,
-        }),
+      const response = await client.mutations.chatWithAgent({
+        prompt: enrichedPrompt,
+        sessionId,
+        customerId: activeCustomerId,
       })
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${await response.text()}`)
+      if (response.errors && response.errors.length > 0) {
+        console.error('chatWithAgent errors:', response.errors)
+        throw new Error(response.errors[0].message)
       }
 
-      const replyText = parseAgentResponse(await response.text())
+      const replyText = response.data ?? 'Received an empty response from the assistant.'
 
       setMessages((prev) => [
         ...prev,
@@ -169,9 +95,7 @@ export default function ChatAssistant({ username, customerId }: ChatAssistantPro
         ...prev,
         {
           role: 'agent',
-          content: IS_LOCAL
-            ? '⚠️ Unable to reach local agent. Make sure `uv run agentcore dev` is active.'
-            : '⚠️ Unable to connect to the Energy Assistant. Please try again.',
+          content: '⚠️ Unable to connect to the Energy Assistant. Please try again.',
         },
       ])
     } finally {
@@ -225,7 +149,7 @@ export default function ChatAssistant({ username, customerId }: ChatAssistantPro
                   code({ className, children, ...props }: React.HTMLAttributes<HTMLElement> & { children?: React.ReactNode }) {
                     const inline = !String(children).includes('\n')
                     const match = /language-(\w+)/.exec(className || '')
-                    
+
                     // Intercept chart blocks
                     if (!inline && match && match[1] === 'chart') {
                       try {
@@ -247,7 +171,7 @@ export default function ChatAssistant({ username, customerId }: ChatAssistantPro
                         return <div style={{ color: 'red', marginTop: '10px' }}>⚠️ Error parsing chart data.</div>
                       }
                     }
-                    
+
                     // Standard code block fallback
                     return (
                       <code className={className} {...props}>

@@ -1,4 +1,5 @@
 import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
+import { chatAgent } from '../functions/chatAgent/resource';
 
 const schema = a.schema({
   ConsumptionRecord: a
@@ -14,8 +15,18 @@ const schema = a.schema({
     .secondaryIndexes((index) => [
       index("customerId").sortKeys(["monthYear"]).queryField("listByCustomerAndMonth")
     ])
-    // 👇 Tell Amplify to use 'customerId' as the owner field
     .authorization((allow) => [allow.ownerDefinedIn('customerId')]),
+
+  chatWithAgent: a
+    .mutation()
+    .arguments({
+      prompt: a.string().required(),
+      sessionId: a.string().required(),
+      customerId: a.string(),
+    })
+    .returns(a.string())
+    .authorization((allow) => [allow.authenticated()])
+    .handler(a.handler.function(chatAgent)),
 });
 
 export type Schema = ClientSchema<typeof schema>;

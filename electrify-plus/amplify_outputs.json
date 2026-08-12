@@ -158,7 +158,35 @@
         }
       },
       "enums": {},
-      "nonModels": {}
+      "nonModels": {},
+      "mutations": {
+        "chatWithAgent": {
+          "name": "chatWithAgent",
+          "isArray": false,
+          "type": "String",
+          "isRequired": false,
+          "arguments": {
+            "prompt": {
+              "name": "prompt",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true
+            },
+            "sessionId": {
+              "name": "sessionId",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true
+            },
+            "customerId": {
+              "name": "customerId",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false
+            }
+          }
+        }
+      }
     }
   },
   "version": "1.4"
